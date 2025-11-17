@@ -1,0 +1,192 @@
+[
+    {
+        "id": "rest_001",
+        "name": "The Italian Table",
+        "description": "Authentic Italian cuisine with fresh pasta and wood-fired pizzas.",
+        "menu": [
+            {
+                "menuItemId": "item_001",
+                "name": "Margherita Pizza",
+                "price": "12.99",
+                "calories": "850"
+            },
+            {
+                "menuItemId": "item_002",
+                "name": "Spaghetti Carbonara",
+                "price": "14.50",
+                "calories": "950"
+            }
+        ]
+    },
+    {
+        "id": "rest_002",
+        "name": "Sushi World",
+        "description": "Japanese sushi bar offering fresh sashimi and creative rolls.",
+        "menu": [
+            {
+                "menuItemId": "item_003",
+                "name": "Salmon Nigiri",
+                "price": "4.00",
+                "calories": "120"
+            },
+            {
+                "menuItemId": "item_004",
+                "name": "Dragon Roll",
+                "price": "13.00",
+                "calories": "400"
+            }
+        ]
+    },
+    {
+        "id": "rest_003",
+        "name": "Spice Route",
+        "description": "Indian restaurant specializing in curries and tandoori dishes.",
+        "menu": [
+            {
+                "menuItemId": "item_005",
+                "name": "Butter Chicken",
+                "price": "11.99",
+                "calories": "700"
+            },
+            {
+                "menuItemId": "item_006",
+                "name": "Paneer Tikka",
+                "price": "9.99",
+                "calories": "600"
+            }
+        ]
+    },
+    {
+        "id": "rest_004",
+        "name": "Green Bowl",
+        "description": "Healthy salads and vegetarian bowls with organic ingredients.",
+        "menu": [
+            {
+                "menuItemId": "item_007",
+                "name": "Quinoa Salad",
+                "price": "8.50",
+                "calories": "350"
+            },
+            {
+                "menuItemId": "item_008",
+                "name": "Avocado Bowl",
+                "price": "10.00",
+                "calories": "400"
+            }
+        ]
+    },
+    {
+        "id": "rest_005",
+        "name": "Burger Barn",
+        "description": "Classic American burgers, fries, and milkshakes.",
+        "menu": [
+            {
+                "menuItemId": "item_009",
+                "name": "Cheeseburger",
+                "price": "9.50",
+                "calories": "750"
+            },
+            {
+                "menuItemId": "item_010",
+                "name": "Chili Cheese Fries",
+                "price": "6.00",
+                "calories": "600"
+            }
+        ]
+    },
+    {
+        "id": "rest_006",
+        "name": "Taco Town",
+        "description": "Authentic Mexican street tacos and burritos.",
+        "menu": [
+            {
+                "menuItemId": "item_011",
+                "name": "Carne Asada Tacos",
+                "price": "3.50",
+                "calories": "250"
+            },
+            {
+                "menuItemId": "item_012",
+                "name": "Chicken Burrito",
+                "price": "10.50",
+                "calories": "800"
+            }
+        ]
+    },
+    {
+        "id": "rest_007",
+        "name": "The Noodle House",
+        "description": "Pan-Asian noodle dishes from ramen to pad thai.",
+        "menu": [
+            {
+                "menuItemId": "item_013",
+                "name": "Tonkotsu Ramen",
+                "price": "13.50",
+                "calories": "900"
+            },
+            {
+                "menuItemId": "item_014",
+                "name": "Pad Thai",
+                "price": "12.00",
+                "calories": "700"
+            }
+        ]
+    },
+    {
+        "id": "rest_008",
+        "name": "Steakhouse Supreme",
+        "description": "Premium cuts of steak and classic steakhouse sides.",
+        "menu": [
+            {
+                "menuItemId": "item_015",
+                "name": "Ribeye Steak",
+                "price": "35.00",
+                "calories": "1200"
+            },
+            {
+                "menuItemId": "item_016",
+                "name": "Creamed Spinach",
+                "price": "7.00",
+                "calories": "300"
+            }
+        ]
+    },
+    {
+        "id": "rest_009",
+        "name": "The Breakfast Club",
+        "description": "All-day breakfast and brunch favorites.",
+        "menu": [
+            {
+                "menuItemId": "item_017",
+                "name": "Pancakes",
+                "price": "9.00",
+                "calories": "600"
+            },
+            {
+                "menuItemId": "item_018",
+                "name": "Eggs Benedict",
+                "price": "12.50",
+                "calories": "750"
+            }
+        ]
+    },
+    {
+        "id": "rest_010",
+        "name": "Mediterranean Bites",
+        "description": "Fresh and flavorful Mediterranean and Greek dishes.",
+        "menu": [
+            {
+                "menuItemId": "item_019",
+                "name": "Gyro Plate",
+                "price": "11.00",
+                "calories": "850"
+            },
+            {
+                "menuItemId": "item_020",
+                "name": "Hummus with Pita",
+                "price": "6.50",
+                "calories": "450"
+            }
+        ]
+    }
+]
