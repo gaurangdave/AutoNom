@@ -34,3 +34,16 @@ This repository aims to be a high-quality, end-to-end example of a modern AI app
 **Phase 1: Tracer Bullet**
 * The project is in its initial "tracer bullet" phase.
 * The core logic is being mapped out in a hardcoded `src/main.py` script to validate the workflow before complex ADK implementation.
+
+
+## 🚀 About Me
+
+A jack of all trades in software engineering, with 15 years of crafting full-stack solutions, scalable architectures, and pixel-perfect designs. Now expanding my horizons into AI/ML, blending experience with curiosity to build the future of tech—one model at a time.
+
+## 🔗 Links
+
+[![portfolio](https://img.shields.io/badge/my_portfolio-000?style=for-the-badge&logo=ko-fi&logoColor=white)](https://gaurangdave.me/)
+[![linkedin](https://img.shields.io/badge/linkedin-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/gaurangvdave/)
+
+## 🛠 Skills
+`Google ADK`, `Agentic AI`
