@@ -9,7 +9,7 @@ from schema.restaurant import Restaurants
 
 def get_random_restaurant(num_of_restaurants: int = 1) -> list[Any]:
 
-    with open('./src/data/restaurants.json', 'r') as file:
+    with open('./data/restaurants.json', 'r') as file:
         restaurants = json.load(file)
 
     return random.sample(restaurants, num_of_restaurants)
@@ -36,7 +36,7 @@ def get_random_order(number_of_restaurants: int = 1) -> list[Any]:
 
 def get_restaurant_list() -> Restaurants:
 
-    with open('./src/data/restaurants.json', 'r') as file:
+    with open('./data/restaurants.json', 'r') as file:
         restaurants = json.load(file)
 
     return restaurants

@@ -22,7 +22,9 @@ initial_state: dict[str, Any] = {
     "user_id": "tony_h_stark",
     "user_dietary_preferences": ["pescatarian"],
     "user_allergies": ["gluten", "nuts"],
-    "workflow_status": "PLANNING_MEAL"
+    "workflow_status": "PLANNING_MEAL",
+    "meal_options": [],
+    "meal_options_feedback": ""
 }
 
 APP_NAME = "auto_nom_agent"
