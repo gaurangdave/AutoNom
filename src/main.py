@@ -24,7 +24,7 @@ initial_state: dict[str, Any] = {
     "user_allergies": ["gluten", "nuts"],
     "workflow_status": "PLANNING_MEAL",
     "meal_options": [],
-    "meal_options_feedback": ""
+    "user_feedback": ""
 }
 
 APP_NAME = "auto_nom_agent"
@@ -41,7 +41,7 @@ async def call_agent_async(runner: Runner, user_id: str, session_id: str, query:
                 if event.content.parts and hasattr(event.content.parts[0], "text"):
                     text_part = getattr(event.content.parts[0], "text", None)
                     final_response_text = text_part or ""
-                    print(f"Final Response: {final_response_text}")
+                    print(f"AutoNom: {final_response_text}")
 
     return final_response_text
 

@@ -1,0 +1,42 @@
+[
+  {
+    "status": "INITIALIZE",
+    "meaning": "The workflow has just been triggered (e.g., by a schedule). No work has been done yet.",
+    "action": "Welcome the user and use the meal_planner tool to start researching meal options based on user preferences."
+  },
+  {
+    "status": "MEAL_PLANNING_STARTED",
+    "meaning": "The meal_planner is currently active. It is searching for restaurants and gathering menu items.",
+    "action": "Meal planning has started, wait for meal_planner to return 3 meal options."
+  },
+  {
+    "status": "MEAL_PLANNING_COMPLETE",
+    "meaning": "Research is finished. The session contains a valid list of 3 meal options.",
+    "action": "Delegate to meal_choice_verifier to format and verify these options from the user."
+  },
+  {
+    "status": "AWAITING_USER_APPROVAL",
+    "meaning": "Options have been sent to the user. The system is paused waiting for an external signal (webhook).",
+    "action": "STOP execution. Do not proceed until a user reply updates the state."
+  },
+  {
+    "status": "USER_APPROVAL_RECEIVED",
+    "meaning": "The user has explicitly selected a meal option (1, 2, or 3). The choice is saved in the session.",
+    "action": "Call order_agent to place the order for the selected item."
+  },
+  {
+    "status": "USER_REJECTION_RECEIVED",
+    "meaning": "The user provided negative feedback or rejected all options. New constraints are available in the session.",
+    "action": "Delegate to meal_planner again."
+  },
+  {
+    "status": "PLACING_ORDER",
+    "meaning": "The order_agent is currently communicating with the external delivery API.",
+    "action": "Wait for order_agent to return confirmation."
+  },
+  {
+    "status": "ORDER_CONFIRMED",
+    "meaning": "The external API has returned a success code. The meal is ordered.",
+    "action": "Inform the user that order has been placed successfully. Wish them a good meal!. End workflow."
+  }
+]
