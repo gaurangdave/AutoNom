@@ -22,9 +22,10 @@ initial_state: dict[str, Any] = {
     "user_id": "tony_h_stark",
     "user_dietary_preferences": ["pescatarian"],
     "user_allergies": ["gluten", "nuts"],
-    "workflow_status": "PLANNING_MEAL",
+    "workflow_status": "INITIALIZE",
     "meal_options": [],
-    "user_feedback": ""
+    "user_feedback": "",
+    "user_choice": ""
 }
 
 APP_NAME = "auto_nom_agent"
@@ -49,25 +50,25 @@ async def call_agent_async(runner: Runner, user_id: str, session_id: str, query:
 async def main():
     user_id = initial_state["user_id"]
     # list sessions
-    existing_sessions = await session_service.list_sessions(app_name=APP_NAME, user_id=user_id)
+    # existing_sessions = await session_service.list_sessions(app_name=APP_NAME, user_id=user_id)
 
     # Use a local variable to avoid creating an unbound local name for SESSION_ID
     session_id = str(uuid.uuid4())
 
     # if existing session exists for the user load the fist one.
     # is it possible for a user to have more than one session? -- what would be the use case there.
-    if existing_sessions and len(existing_sessions.sessions) > 0:
-        session_id = existing_sessions.sessions[0].id
-        session_id = existing_sessions.sessions[0].id
-        print("🥳 Found existing session...")
-    else:
+    # if existing_sessions and len(existing_sessions.sessions) > 0:
+    #     session_id = existing_sessions.sessions[0].id
+    #     session_id = existing_sessions.sessions[0].id
+    #     print("🥳 Found existing session...")
+    # else:
         # this method creates and returns the newly created session
-        await session_service.create_session(
-            app_name=APP_NAME,
-            user_id=user_id,
-            session_id=session_id,
-            state=initial_state
-        )
+    await session_service.create_session(
+        app_name=APP_NAME,
+        user_id=user_id,
+        session_id=session_id,
+        state=initial_state
+    )
 
     # Create a runner with the memory agent
     runner = Runner(

@@ -1,14 +1,87 @@
-from typing import Optional
+# from typing import Optional
+from google.adk.agents import LlmAgent
+from google.adk.tools.function_tool import FunctionTool
+from google.adk.tools.agent_tool import AgentTool
+from google.adk.tools.tool_context import ToolContext
+
+from schema.restaurant import Restaurants
+from schema.meals import MealOptions
+from utils.restaurant_utils import get_restaurant_list
+# from pydantic import BaseModel,Field
+# from google.adk.agents.callback_context import CallbackContext
+# from google.genai import types
+# from google.adk.models.llm_response import LlmResponse
 from google.adk.agents import LlmAgent
 from google.adk.tools.function_tool import FunctionTool
 from google.adk.tools.tool_context import ToolContext
-from pydantic import BaseModel, Field
 
-from schema.restaurant import Restaurants
-from utils.restaurant_utils import get_restaurant_list
-# from pydantic import BaseModel,Field
-from google.adk.agents.callback_context import CallbackContext
-from google.genai import types
+
+
+def update_user_choice(choice: int, tool_context: ToolContext) -> dict[str, str]:
+    """
+    Updates the state with the choice number that the user selected. 
+
+    Args:
+        choice (int): number representing the user selection
+
+    Returns:
+        dict[str,str]: response dictionary with update operation status and message
+    """
+    tool_context.state["user_choice"] = choice
+    tool_context.state["workflow_status"] = "PLACING_ORDER"
+
+    return {
+        "status": "success",
+        "message": "User restaurant choice has been saved"
+    }
+
+
+def update_user_feedback(feedback: str, tool_context: ToolContext) -> dict[str, str]:
+    """
+    Updates the state with the feedback provided by the user. 
+
+    Args:
+        choice (int): number representing the user selection
+
+    Returns:
+        dict[str,str]: response dictionary with update operation status and message
+    """
+    tool_context.state["user_feedback"] = feedback
+    # tool_context.state["workflow_status"] = "PLACING_ORDER"
+
+    return {
+        "status": "success",
+        "message": "User feedback has been saved"
+    }
+
+
+meal_choice_verifier = LlmAgent(
+    model="gemini-2.5-flash",
+    name="MealChoiceVerifier",
+    description="Shares the meal options with the user and confirms their choice",
+    instruction="""
+    You are a helpful, polite and cheerful assistant whose role is to share the following meal options with the user 
+    and save their response.
+    
+    ** Meal Options **
+    {meal_options}
+    
+    ** Task **
+    * IMPORTANT DO NOT share any IDs with the user.
+    * IMPORTANT only give options from Meal Options
+    * Important Number each option for easier selection.
+    * Share the options with the user to get their response with a friendly message.
+    * Wait for user response.
+    * When the tool returns the user's answer, analyze it:
+        - If they picked a number, use `update_user_choice` tool to save the choice.
+        - If they gave feedback (e.g., "I don't like these"), use `update_user_feedback` to save the feedback.
+    * Delegate the user back to the parent `meal_planner` agent.
+    """,
+    tools=[
+        FunctionTool(update_user_choice),
+        FunctionTool(update_user_feedback)]
+)
+
 
 
 def get_restaurant_list_tool(tool_context: ToolContext) -> dict[str, Restaurants]:
@@ -23,41 +96,12 @@ def get_restaurant_list_tool(tool_context: ToolContext) -> dict[str, Restaurants
     }
 
 
-class Order(BaseModel):
-    id: str = Field(description="Menu item id")
-    name: str = Field(description="Menu item name")
-    price: float = Field(description="Menu item price")
-    calories: float = Field(description="Menu item calories")
-
-
-class Meals(BaseModel):
-    id: str = Field(description="Restaurant ID")
-    name: str = Field(description="Restaurant Name")
-    description: str = Field(description="Restaurant description")
-    order: list[Order] = Field(
-        description="list of orders from the restaurant")
-
-
-class MealOptions(BaseModel):
-    options: list[Meals] = Field(description="List of Meals")
-
-
-def _before_agent_callback(callback_context: CallbackContext) -> Optional[types.Content]:
-    print(f"before agent callback...")
-    return None
-
-
-def _after_agent_callback(callback_context: CallbackContext) -> Optional[types.Content]:
-    print(f"after agent callback...")
-    return None
-
-
-meal_planner = LlmAgent(
+restaurant_scout_agent = LlmAgent(
     model="gemini-2.5-flash",
-    name="MealChoiceGenerator",
+    name="restaurant_scout_agent",
     description="Scans various restaurant options and generates choice of 3 options",
     instruction="""
-    You are a creative and diligent meal planner. 
+    You are a creative and diligent restaurant scout. 
     Your role is to find the restaurants and meal options for the user based on their feedback and preferences. 
     
     ** User Preferences **
@@ -68,11 +112,12 @@ meal_planner = LlmAgent(
     Previously Shared Options:
     {meal_options}
     
-    Feedback:
+    Feedback on previous options:
     {user_feedback}
-
+    
     ** Task **
-    * Use the `get_restaurant_list_tool` tool to get the list of restaurants that deliver in users location
+    * Update the workflow status using the `update_workflow_status` tool. 
+    * Use the `get_restaurant_list_tool` tool to get the list of restaurants that deliver in users location.
     * Finalize 3 restaurants based on `User Preferences` and `User Feedback` on previous suggestions.
     * IMPORTANT your response MUST be a valid JSON matching this structure
     {
@@ -91,7 +136,76 @@ meal_planner = LlmAgent(
         ]
     }
     """,
+    output_schema=MealOptions,
     tools=[FunctionTool(get_restaurant_list_tool)],
-    before_agent_callback=_before_agent_callback,
-    after_agent_callback=_after_agent_callback
+)
+
+
+
+
+def update_meal_options(options: MealOptions, tool_context: ToolContext) -> dict[str, str]:
+    """Saves the selected meal options for the user
+
+    Args:
+        options (MealOptions): dictionary representing list of meal options
+
+    Returns:
+        dict[str,str]: response dictionary with update operation status and message
+    """
+    tool_context.state["meal_options"] = options.model_dump()
+
+    return {
+        "status": "success",
+        "message": "meal options are saved successfully"
+    }
+
+
+def update_workflow_status(status: str, tool_context: ToolContext) -> dict[str, str]:
+    return {
+        "status": "success",
+        "message": "meal options are saved successfully"
+    }
+
+
+meal_planner = LlmAgent(
+    model="gemini-2.5-flash",
+    name="MealPlanner",
+    description="Scans various restaurant options and generates choice of 3 options",
+    instruction="""
+    You are a creative and diligent meal planner. 
+    Your role is to plan a perfect next meal for the user.
+    To do that you have access to following agent and tools
+    * `restaurant_scout_agent` tool that will research and return 3 restaurants based on user preferences and feedback.
+    * `meal_choice_verifier` agent that will share the meal choices from above 3 restaurants and get user approval on one or more. 
+        * If the user doesn't approve any restaurant they will give us feedback that will be used by `restaurant_scout_agent` to find more options. 
+        
+
+    ** Your Duties **
+    * Step 0: Welcome the user and inform them that you are finding restaurants for them in an exciting manner. 
+    * Step 1: Use the `restaurant_scout_agent` tool to get the list of restaurants for the user.
+    * Step 2: IMPORTANT use the `update_meal_options` tool to save the options for the user. DO NOT SKIP THIS STEP
+    * Step 3: Delegate to `meal_choice_verifier` agent to verify the choices from the user.
+    * Continue repeating step 1 to 3 till user has selected a restaurant.
+    * IMPORTANT always update workflow status using the `update_workflow_status` tool. Set the status to following values,
+        * MEAL_PLANNING_STARTED - while searching for restaurants.
+        * MEAL_PLANNING_COMPLETE - when 3 restaurants have been finalized and saved.
+        * AWAITING_USER_APPROVAL - when meal options have been delivered to the user. 
+        * USER_APPROVAL_RECEIVED - When user approves one or more options.
+        * USER_REJECTION_RECEIVED - When user rejected all the options. 
+        
+        
+    ** User Feedback **
+    Previously Shared Options:
+    {meal_options}
+    
+    Feedback on previous options:
+    {user_feedback}
+    
+    User choice on previous options:
+    {user_choice}
+
+    """,
+    tools=[AgentTool(restaurant_scout_agent), FunctionTool(
+        update_meal_options), FunctionTool(update_workflow_status)],
+    sub_agents=[meal_choice_verifier]
 )

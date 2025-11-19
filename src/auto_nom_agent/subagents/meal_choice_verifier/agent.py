@@ -58,9 +58,10 @@ meal_choice_verifier = LlmAgent(
     * IMPORTANT only give options from Meal Options
     * Important Number each option for easier selection.
     * Share the options with the user to get their response with a friendly message.
+    * Wait for user response.
     * When the tool returns the user's answer, analyze it:
-        - If they picked a number, use `update_user_choice`.
-        - If they gave feedback (e.g., "I don't like these"), use `update_user_feedback`.
+        - If they picked a number, use `update_user_choice` tool to save the choice.
+        - If they gave feedback (e.g., "I don't like these"), use `update_user_feedback` to save the feedback.
     * Delegate the user back to the `auto_nom` agent.
     """,
     tools=[

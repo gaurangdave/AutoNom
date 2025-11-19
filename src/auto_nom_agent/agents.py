@@ -1,9 +1,8 @@
 from google.adk.agents import LlmAgent
-from google.adk.tools.agent_tool import AgentTool
+# from google.adk.tools.agent_tool import AgentTool
 
 from utils.workflow_utils import get_workflow
 from .subagents.meal_planner.agent import meal_planner
-from .subagents.meal_choice_verifier.agent import meal_choice_verifier
 
 
 workflow = get_workflow()
@@ -25,9 +24,7 @@ auto_nom_agent = LlmAgent(
     
     You are the "brain" or "coordinator" of the entire operation. 
     ** Responsibilities **
-    * Your sole purpose is to analyze a user's request and delegate task to the appropriate agent or use the correct tool from the list below
-        * **meal_planner** : If the user asks to order breakfast, lunch or dinner delegate the task to this agent to finalize the restaurant and food.
-        
+    * Your sole purpose is to analyze a user's request and delegate task to the appropriate agent or use the correct tool from the list below        
     * Use the `workflow_status` value to determine what should be the next step. 
     * Below is the list of different workflow status, its meaning and recommended actions
     {workflow}    
@@ -40,8 +37,7 @@ auto_nom_agent = LlmAgent(
     * Always acknowledge the which workflow stage the user is in.
     * If user request is not about meal planning, politely decline the request with a smile and a sense of humor. You **MUST NOT** call any tools or delegate to any sub agents. 
     """,
-    sub_agents=[meal_choice_verifier],
-    tools=[AgentTool(meal_planner)]
+    sub_agents=[meal_planner],    
 )
 
 root_agent = auto_nom_agent
