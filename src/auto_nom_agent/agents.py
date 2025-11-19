@@ -3,12 +3,12 @@ from google.adk.agents import LlmAgent
 
 from utils.workflow_utils import get_workflow
 from .subagents.meal_planner.agent import meal_planner
-
-
+from auto_nom_agent.configs import retry_options, model
+from google.adk.models.google_llm import Gemini
 workflow = get_workflow()
 
 auto_nom_agent = LlmAgent(
-    model="gemini-2.5-flash",
+    model=Gemini(model=model,retry_options=retry_options),
     name="auto_nom_agent",
     description="The primary coordinator of for the AutoNom meal planning and ordering service. Its sole responsibility is to manage end to end workflow by delegating tasks to sub agents",
     instruction=f"""
@@ -37,7 +37,7 @@ auto_nom_agent = LlmAgent(
     * Always acknowledge the which workflow stage the user is in.
     * If user request is not about meal planning, politely decline the request with a smile and a sense of humor. You **MUST NOT** call any tools or delegate to any sub agents. 
     """,
-    sub_agents=[meal_planner],    
+    sub_agents=[meal_planner],
 )
 
 root_agent = auto_nom_agent

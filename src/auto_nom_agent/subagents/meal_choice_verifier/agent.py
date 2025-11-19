@@ -1,7 +1,8 @@
 from google.adk.agents import LlmAgent
 from google.adk.tools.function_tool import FunctionTool
 from google.adk.tools.tool_context import ToolContext
-
+from auto_nom_agent.configs import retry_options, model
+from google.adk.models.google_llm import Gemini
 
 
 def update_user_choice(choice: int, tool_context: ToolContext) -> dict[str, str]:
@@ -43,7 +44,7 @@ def update_user_feedback(feedback: str, tool_context: ToolContext) -> dict[str, 
 
 
 meal_choice_verifier = LlmAgent(
-    model="gemini-2.5-flash",
+    model=Gemini(model=model,retry_options=retry_options),
     name="MealChoiceVerifier",
     description="Shares the meal options with the user and confirms their choice",
     instruction="""

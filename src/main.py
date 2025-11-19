@@ -4,6 +4,7 @@ import asyncio
 from dotenv import load_dotenv
 from google.adk.runners import Runner
 from google.adk.sessions import DatabaseSessionService
+from google.adk.events import Event
 from google.genai import types
 from typing import Any
 from auto_nom_agent.agents import root_agent
@@ -41,6 +42,78 @@ initial_state: dict[str, Any] = {
 APP_NAME = "auto_nom_agent"
 
 
+def print_function_calls(agent_name: str, event: Event):
+    """Helper function to print function call events
+
+    Args:
+        agent_name (str): _description_
+        event (Event): _description_
+    """
+    calls = event.get_function_calls()
+    if calls:
+        # Event is a tool call request
+        for call in calls:
+            tool_name = call.name
+            arguments = call.args  # This is usually a dictionary
+            console.print(Panel(
+                f"[bold yellow]Function:[/bold yellow] {tool_name}\n\n"
+                f"[bold yellow]Arguments:[/bold yellow]\n{arguments}",
+                title=f"[bold yellow]🔧 {agent_name} - Tool Call[/bold yellow]",
+                border_style="yellow",
+                box=box.ROUNDED
+            ))
+
+
+def print_function_responses(agent_name: str, event: Event):
+    """Helper function to print function call response events
+
+    Args:
+        agent_name (str): _description_
+        event (Event): _description_
+    """
+    responses = event.get_function_responses()
+    if responses:
+        for response in responses:
+            tool_name = response.name
+            result_dict = response.response
+            console.print(Panel(
+                f"[bold magenta]Function:[/bold magenta] {tool_name}\n\n"
+                f"[bold magenta]Response:[/bold magenta]\n{result_dict}",
+                title=f"[bold magenta]✅ Tool Response[/bold magenta]",
+                border_style="magenta",
+                box=box.ROUNDED
+            ))
+
+
+def print_conversation(agent_name: str, event: Event):
+    final_response_text = ""
+    if event.content and event.content.parts:
+        if event.content.parts[0].text:
+            text = event.content.parts[0].text
+            if event.partial:
+                print("  Type: Streaming Text Chunk")
+            else:
+                print("  Type: Complete Text Message")
+            if event.is_final_response():
+                console.print(Panel(
+                    Markdown(text),
+                    title=f"[bold green]🤖 {agent_name}[/bold green]",
+                    border_style="green",
+                    box=box.ROUNDED
+                ))
+                final_response_text = text
+                return final_response_text
+            else:
+                # Intermediate thinking
+                console.print(Panel(
+                    text,
+                    title=f"[bold cyan]💭 {agent_name} (thinking)[/bold cyan]",
+                    border_style="cyan",
+                    box=box.ROUNDED
+                ))
+    return final_response_text
+
+
 async def call_agent_async(runner: Runner, user_id: str, session_id: str, query: types.Content) -> str:
     final_response_text: str = ""
 
@@ -49,79 +122,86 @@ async def call_agent_async(runner: Runner, user_id: str, session_id: str, query:
     ):
         agent_name = event.author if hasattr(event, "author") else "System"
 
+        print_function_calls(agent_name=agent_name, event=event)
+
+        print_function_responses(agent_name=agent_name, event=event)
+        
+        final_response_text = print_conversation(agent_name=agent_name,event=event)
+
         # Safely obtain parts (handles the case where parts may be None)
-        parts = []
-        if getattr(event, "content", None) is not None:
-            parts: Any = getattr(event.content, "parts", None) or []
+        # parts = []
+        # if getattr(event, "content", None) is not None:
+        #     parts: Any = getattr(event.content, "parts", None) or []
 
-        for part in parts:
-            if hasattr(part, "text") and part.text:
-                text = part.text
+        # for part in parts:
 
-                if event.is_final_response():
-                    console.print(Panel(
-                        Markdown(text),
-                        title=f"[bold green]🤖 {agent_name}[/bold green]",
-                        border_style="green",
-                        box=box.ROUNDED
-                    ))
-                    final_response_text = text
-                else:
-                    # Intermediate thinking
-                    console.print(Panel(
-                        text,
-                        title=f"[bold cyan]💭 {agent_name} (thinking)[/bold cyan]",
-                        border_style="cyan",
-                        box=box.ROUNDED
-                    ))
+            # if hasattr(part, "text") and part.text:
+            #     text = part.text
+
+            #     if event.is_final_response():
+            #         console.print(Panel(
+            #             Markdown(text),
+            #             title=f"[bold green]🤖 {agent_name}[/bold green]",
+            #             border_style="green",
+            #             box=box.ROUNDED
+            #         ))
+            #         final_response_text = text
+            #     else:
+            #         # Intermediate thinking
+            #         console.print(Panel(
+            #             text,
+            #             title=f"[bold cyan]💭 {agent_name} (thinking)[/bold cyan]",
+            #             border_style="cyan",
+            #             box=box.ROUNDED
+            #         ))
 
              # Handle function calls
-            elif hasattr(part, "function_call"):
-                func_call = getattr(part,"function_call", {})
-                func_name = getattr(func_call,"name", "Unknown")
-                # Parse arguments
-                try:
-                    args = getattr(func_call, "args", {})
-                    args_dict = json.loads(args) if isinstance(
-                        args, str) else dict(args)
-                    
-                    args_formatted = json.dumps(args_dict, indent=2)
-                except:
-                    args_formatted = str("")
+            # elif hasattr(part, "function_call"):
+            #     func_call = getattr(part,"function_call", {})
+            #     func_name = getattr(func_call,"name", "Unknown")
+            #     # Parse arguments
+            #     try:
+            #         args = getattr(func_call, "args", {})
+            #         args_dict = json.loads(args) if isinstance(
+            #             args, str) else dict(args)
 
-                console.print(Panel(
-                    f"[bold yellow]Function:[/bold yellow] {func_name}\n\n"
-                    f"[bold yellow]Arguments:[/bold yellow]\n{args_formatted}",
-                    title=f"[bold yellow]🔧 {agent_name} - Tool Call[/bold yellow]",
-                    border_style="yellow",
-                    box=box.ROUNDED
-                ))
+            #         args_formatted = json.dumps(args_dict, indent=2)
+            #     except:
+            #         args_formatted = str("")
+
+            #     console.print(Panel(
+            #         f"[bold yellow]Function:[/bold yellow] {func_name}\n\n"
+            #         f"[bold yellow]Arguments:[/bold yellow]\n{args_formatted}",
+            #         title=f"[bold yellow]🔧 {agent_name} - Tool Call[/bold yellow]",
+            #         border_style="yellow",
+            #         box=box.ROUNDED
+            #     ))
 
             # Handle function responses
-            elif hasattr(part, "function_response"):
-                func_response = part.function_response
+            # elif hasattr(part, "function_response"):
+            #     func_response = part.function_response
 
-                # Parse response
-                try:
-                    response_dict: Any = json.loads(func_response.response) if isinstance(
-                        func_response.response, str) else dict(func_response.response)
-                    response_formatted = json.dumps(
-                        response_dict, indent=2)
-                except:
-                    response_formatted = str(func_response.response)
+            #     # Parse response
+            #     try:
+            #         response_dict: Any = json.loads(func_response.response) if isinstance(
+            #             func_response.response, str) else dict(func_response.response)
+            #         response_formatted = json.dumps(
+            #             response_dict, indent=2)
+            #     except:
+            #         response_formatted = str(func_response.response)
 
-                console.print(Panel(
-                    f"[bold magenta]Function:[/bold magenta] {func_response.name}\n\n"
-                    f"[bold magenta]Response:[/bold magenta]\n{response_formatted}",
-                    title=f"[bold magenta]✅ Tool Response[/bold magenta]",
-                    border_style="magenta",
-                    box=box.ROUNDED
-                ))
+            #     console.print(Panel(
+            #         f"[bold magenta]Function:[/bold magenta] {func_response.name}\n\n"
+            #         f"[bold magenta]Response:[/bold magenta]\n{response_formatted}",
+            #         title=f"[bold magenta]✅ Tool Response[/bold magenta]",
+            #         border_style="magenta",
+            #         box=box.ROUNDED
+            #     ))
 
     return final_response_text
 
 
-async def display_session_info(session_service:DatabaseSessionService, app_name: str, user_id: str, session_id: str):
+async def display_session_info(session_service: DatabaseSessionService, app_name: str, user_id: str, session_id: str):
     """Display current session state"""
     session = await session_service.get_session(
         app_name=app_name,
@@ -149,6 +229,7 @@ async def display_session_info(session_service:DatabaseSessionService, app_name:
 
         console.print(state_table)
 
+
 def display_welcome():
     """Display welcome banner"""
     welcome_text = """
@@ -169,13 +250,14 @@ def display_welcome():
         box=box.DOUBLE
     ))
 
+
 async def main():
     user_id = initial_state["user_id"]
-    
+
     # Clear screen and show welcome
     console.clear()
     display_welcome()
-    
+
     # list sessions
     existing_sessions = await session_service.list_sessions(app_name=APP_NAME, user_id=user_id)
 
@@ -187,17 +269,18 @@ async def main():
     if existing_sessions and len(existing_sessions.sessions) > 0:
         session_id = existing_sessions.sessions[0].id
         session_id = existing_sessions.sessions[0].id
-        console.print(f"[green]✓[/green] Loaded existing session: [cyan]{session_id[:8]}...[/cyan]")
+        console.print(
+            f"[green]✓[/green] Loaded existing session: [cyan]{session_id[:8]}...[/cyan]")
     else:
-    # this method creates and returns the newly created session
+        # this method creates and returns the newly created session
         await session_service.create_session(
             app_name=APP_NAME,
             user_id=user_id,
             session_id=session_id,
             state=initial_state
         )
-        console.print(f"[green]✓[/green] Created new session: [cyan]{session_id[:8]}...[/cyan]")
-
+        console.print(
+            f"[green]✓[/green] Created new session: [cyan]{session_id[:8]}...[/cyan]")
 
     # Create a runner with the memory agent
     console.print()
@@ -224,22 +307,23 @@ async def main():
             console.clear()
             display_welcome()
             continue
-        
+
         elif user_input.lower() == "/state":
             await display_session_info(session_service, APP_NAME, user_id, session_id)
             continue
-        
+
         elif user_input.lower() == "/help":
             display_welcome()
             continue
-        
+
         elif not user_input.strip():
             continue
-        
+
         # Process the user query
         console.print()
         with console.status("[bold green]Thinking...[/bold green]", spinner="dots"):
-            query = types.Content(role="user", parts=[types.Part(text=user_input)])
+            query = types.Content(role="user", parts=[
+                                  types.Part(text=user_input)])
             await call_agent_async(runner, user_id, session_id, query)
 
 if __name__ == "__main__":

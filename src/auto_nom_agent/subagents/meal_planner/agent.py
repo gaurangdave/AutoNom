@@ -11,9 +11,8 @@ from utils.restaurant_utils import get_restaurant_list
 # from google.adk.agents.callback_context import CallbackContext
 # from google.genai import types
 # from google.adk.models.llm_response import LlmResponse
-from google.adk.agents import LlmAgent
-from google.adk.tools.function_tool import FunctionTool
-from google.adk.tools.tool_context import ToolContext
+from auto_nom_agent.configs import retry_options, model
+from google.adk.models.google_llm import Gemini
 
 
 
@@ -56,7 +55,7 @@ def update_user_feedback(feedback: str, tool_context: ToolContext) -> dict[str, 
 
 
 meal_choice_verifier = LlmAgent(
-    model="gemini-2.5-flash",
+    model=Gemini(model=model,retry_options=retry_options),
     name="MealChoiceVerifier",
     description="Shares the meal options with the user and confirms their choice",
     instruction="""
@@ -97,7 +96,7 @@ def get_restaurant_list_tool(tool_context: ToolContext) -> dict[str, Restaurants
 
 
 restaurant_scout_agent = LlmAgent(
-    model="gemini-2.5-flash",
+    model=Gemini(model=model,retry_options=retry_options),
     name="restaurant_scout_agent",
     description="Scans various restaurant options and generates choice of 3 options",
     instruction="""
@@ -168,7 +167,7 @@ def update_workflow_status(status: str, tool_context: ToolContext) -> dict[str, 
 
 
 meal_planner = LlmAgent(
-    model="gemini-2.5-flash",
+    model=Gemini(model=model,retry_options=retry_options),
     name="MealPlanner",
     description="Scans various restaurant options and generates choice of 3 options",
     instruction="""
