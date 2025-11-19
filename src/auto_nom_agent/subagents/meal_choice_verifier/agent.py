@@ -16,7 +16,7 @@ def update_user_choice(choice: int, tool_context: ToolContext) -> dict[str, str]
         dict[str,str]: response dictionary with update operation status and message
     """
     tool_context.state["user_choice"] = choice
-    tool_context.state["workflow_status"] = "PLACING_ORDER"
+    tool_context.state["workflow_status"] = "USER_APPROVAL_RECEIVED"
 
     return {
         "status": "success",
@@ -35,7 +35,7 @@ def update_user_feedback(feedback: str, tool_context: ToolContext) -> dict[str, 
         dict[str,str]: response dictionary with update operation status and message
     """
     tool_context.state["user_feedback"] = feedback
-    # tool_context.state["workflow_status"] = "PLACING_ORDER"
+    tool_context.state["workflow_status"] = "USER_REJECTION_RECEIVED"
 
     return {
         "status": "success",

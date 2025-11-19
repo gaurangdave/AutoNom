@@ -36,7 +36,7 @@ initial_state: dict[str, Any] = {
     "workflow_status": "INITIALIZE",
     "meal_options": [],
     "user_feedback": "",
-    "user_choice": ""
+    "user_choice": []
 }
 
 APP_NAME = "auto_nom_agent"
@@ -127,76 +127,6 @@ async def call_agent_async(runner: Runner, user_id: str, session_id: str, query:
         print_function_responses(agent_name=agent_name, event=event)
         
         final_response_text = print_conversation(agent_name=agent_name,event=event)
-
-        # Safely obtain parts (handles the case where parts may be None)
-        # parts = []
-        # if getattr(event, "content", None) is not None:
-        #     parts: Any = getattr(event.content, "parts", None) or []
-
-        # for part in parts:
-
-            # if hasattr(part, "text") and part.text:
-            #     text = part.text
-
-            #     if event.is_final_response():
-            #         console.print(Panel(
-            #             Markdown(text),
-            #             title=f"[bold green]🤖 {agent_name}[/bold green]",
-            #             border_style="green",
-            #             box=box.ROUNDED
-            #         ))
-            #         final_response_text = text
-            #     else:
-            #         # Intermediate thinking
-            #         console.print(Panel(
-            #             text,
-            #             title=f"[bold cyan]💭 {agent_name} (thinking)[/bold cyan]",
-            #             border_style="cyan",
-            #             box=box.ROUNDED
-            #         ))
-
-             # Handle function calls
-            # elif hasattr(part, "function_call"):
-            #     func_call = getattr(part,"function_call", {})
-            #     func_name = getattr(func_call,"name", "Unknown")
-            #     # Parse arguments
-            #     try:
-            #         args = getattr(func_call, "args", {})
-            #         args_dict = json.loads(args) if isinstance(
-            #             args, str) else dict(args)
-
-            #         args_formatted = json.dumps(args_dict, indent=2)
-            #     except:
-            #         args_formatted = str("")
-
-            #     console.print(Panel(
-            #         f"[bold yellow]Function:[/bold yellow] {func_name}\n\n"
-            #         f"[bold yellow]Arguments:[/bold yellow]\n{args_formatted}",
-            #         title=f"[bold yellow]🔧 {agent_name} - Tool Call[/bold yellow]",
-            #         border_style="yellow",
-            #         box=box.ROUNDED
-            #     ))
-
-            # Handle function responses
-            # elif hasattr(part, "function_response"):
-            #     func_response = part.function_response
-
-            #     # Parse response
-            #     try:
-            #         response_dict: Any = json.loads(func_response.response) if isinstance(
-            #             func_response.response, str) else dict(func_response.response)
-            #         response_formatted = json.dumps(
-            #             response_dict, indent=2)
-            #     except:
-            #         response_formatted = str(func_response.response)
-
-            #     console.print(Panel(
-            #         f"[bold magenta]Function:[/bold magenta] {func_response.name}\n\n"
-            #         f"[bold magenta]Response:[/bold magenta]\n{response_formatted}",
-            #         title=f"[bold magenta]✅ Tool Response[/bold magenta]",
-            #         border_style="magenta",
-            #         box=box.ROUNDED
-            #     ))
 
     return final_response_text
 

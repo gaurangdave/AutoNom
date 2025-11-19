@@ -6,6 +6,7 @@ from google.adk.tools.tool_context import ToolContext
 
 from schema.restaurant import Restaurants
 from schema.meals import MealOptions
+from auto_nom_agent.tools.common_tools import update_workflow_status
 from utils.restaurant_utils import get_restaurant_list
 # from pydantic import BaseModel,Field
 # from google.adk.agents.callback_context import CallbackContext
@@ -16,7 +17,7 @@ from google.adk.models.google_llm import Gemini
 
 
 
-def update_user_choice(choice: int, tool_context: ToolContext) -> dict[str, str]:
+def update_user_choice(choice: list[int], tool_context: ToolContext) -> dict[str, str]:
     """
     Updates the state with the choice number that the user selected. 
 
@@ -27,7 +28,7 @@ def update_user_choice(choice: int, tool_context: ToolContext) -> dict[str, str]
         dict[str,str]: response dictionary with update operation status and message
     """
     tool_context.state["user_choice"] = choice
-    tool_context.state["workflow_status"] = "PLACING_ORDER"
+    tool_context.state["workflow_status"] = "USER_APPROVAL_RECEIVED"
 
     return {
         "status": "success",
@@ -46,7 +47,7 @@ def update_user_feedback(feedback: str, tool_context: ToolContext) -> dict[str, 
         dict[str,str]: response dictionary with update operation status and message
     """
     tool_context.state["user_feedback"] = feedback
-    # tool_context.state["workflow_status"] = "PLACING_ORDER"
+    tool_context.state["workflow_status"] = "USER_REJECTION_RECEIVED"
 
     return {
         "status": "success",
@@ -67,10 +68,12 @@ meal_choice_verifier = LlmAgent(
     
     ** Task **
     * IMPORTANT DO NOT share any IDs with the user.
-    * IMPORTANT only give options from Meal Options
-    * Important Number each option for easier selection.
-    * Share the options with the user to get their response with a friendly message.
+    * IMPORTANT only give options from Meal Options.
+    * If there are multiple options from same restaurant, break it down into different choices.
+    * Important Number each choice for easier selection.
+    * Share the choices with the user to get their response with a friendly message.
     * Wait for user response.
+    * The user can either choose 1 or more option or can reject them all with some feedback. 
     * When the tool returns the user's answer, analyze it:
         - If they picked a number, use `update_user_choice` tool to save the choice.
         - If they gave feedback (e.g., "I don't like these"), use `update_user_feedback` to save the feedback.
@@ -135,7 +138,7 @@ restaurant_scout_agent = LlmAgent(
         ]
     }
     """,
-    output_schema=MealOptions,
+    # output_schema=MealOptions,
     tools=[FunctionTool(get_restaurant_list_tool)],
 )
 
@@ -159,11 +162,6 @@ def update_meal_options(options: MealOptions, tool_context: ToolContext) -> dict
     }
 
 
-def update_workflow_status(status: str, tool_context: ToolContext) -> dict[str, str]:
-    return {
-        "status": "success",
-        "message": "meal options are saved successfully"
-    }
 
 
 meal_planner = LlmAgent(
@@ -193,6 +191,9 @@ meal_planner = LlmAgent(
         * USER_REJECTION_RECEIVED - When user rejected all the options. 
         
         
+    ** Current Workflow Status **
+    {workflow_status}
+    
     ** User Feedback **
     Previously Shared Options:
     {meal_options}

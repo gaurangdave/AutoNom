@@ -22,17 +22,17 @@
   {
     "status": "USER_APPROVAL_RECEIVED",
     "meaning": "The user has explicitly selected a meal option (1, 2, or 3). The choice is saved in the session.",
-    "action": "Call order_agent to place the order for the selected item."
+    "action": "Delegate to meal_order_executor to place the order for the selected item."
   },
   {
     "status": "USER_REJECTION_RECEIVED",
     "meaning": "The user provided negative feedback or rejected all options. New constraints are available in the session.",
-    "action": "Delegate to meal_planner again."
+    "action": "Delegate to meal_planner."
   },
   {
     "status": "PLACING_ORDER",
-    "meaning": "The order_agent is currently communicating with the external delivery API.",
-    "action": "Wait for order_agent to return confirmation."
+    "meaning": "The meal_order_executor is currently communicating with the external delivery API.",
+    "action": "Wait for meal_order_executor to return confirmation."
   },
   {
     "status": "ORDER_CONFIRMED",
