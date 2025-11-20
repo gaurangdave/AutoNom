@@ -1,72 +1,92 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from typing import Any
-
+from datetime import datetime
+from contextlib import asynccontextmanager
 
 # Local Imports
 from src.db import db_manager
 from src.schema.users import UserProfile
+from src.utils.logger import AutoNomLogger
 
-app = FastAPI(app="Auto-Nom API")
+# Lifespan context manager
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    db_manager.init_db()
+    AutoNomLogger.startup_message()
+    
+    yield
+    
+    # Shutdown
+    AutoNomLogger.shutdown_message()
+
+app = FastAPI(title="Auto-Nom API", version="1.0.0", lifespan=lifespan)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="./src/static"), name="static")
 
-# Initialize DB on startup
-db_manager.init_db()
-
 
 @app.get("/api/")
 async def root():
-    return {"message": "Hello Auto Nom"}
+    AutoNomLogger.health_check()
+    return {"message": "Hello Auto Nom", "status": "healthy", "timestamp": datetime.now().isoformat()}
 
 # --- User APIs ---
 
 
 @app.get("/api/users")
 async def list_users():
-    return db_manager.get_all_users()
+    try:
+        AutoNomLogger.fetching_users()
+        users = db_manager.get_all_users()
+        AutoNomLogger.users_retrieved_table(users)
+        return users
+    except Exception as e:
+        AutoNomLogger.user_retrieval_error(str(e))
+        raise HTTPException(status_code=500, detail="Internal server error while retrieving users")
 
 
 @app.post("/api/users")
 async def create_user(user: UserProfile) -> dict[str, Any]:
-    db_manager.upsert_user(
-        user.id, user.name, user.preferences, user.allergies, user.schedule)
-    return {"status": "success", "user_id": user.id}
+    try:
+        AutoNomLogger.user_operation_panel(
+            user.id, user.name, user.preferences, user.allergies, user.schedule
+        )
+        
+        db_manager.upsert_user(
+            user.id, user.name, user.preferences, user.allergies, user.schedule
+        )
+        
+        AutoNomLogger.user_operation_success(user.name, user.id)
+        return {"status": "success", "user_id": user.id, "timestamp": datetime.now().isoformat()}
+        
+    except Exception as e:
+        AutoNomLogger.user_operation_error(user.id, str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to create/update user: {str(e)}")
 
 # --- Workflow APIs ---
-# @app.post("/api/users/{user_id}/meals/{meal_type}/trigger")
-# async def trigger_workflow(user_id: str, meal_type: str):
-#     """
-#     PHASE 1: Start the Agent.
-#     Run until it pauses at 'AWAITING_USER_APPROVAL'.
-#     """
-#     session_id = str(uuid.uuid4())
-
-#     # 1. Create DB Entry
-#     db_manager.create_session(session_id, user_id, meal_type)
-
-#     # 2. Init ADK Session
-#     adk_session = adk.get_service(SessionService)
-#     await adk_session.set("workflow_status", "INITIALIZE", session_id=session_id)
-#     # Context for agent
-#     await adk_session.set("user_id", user_id, session_id=session_id)
-
-#     # 3. Run Orchestrator (It handles Phase 1)
-#     await adk.run_agent("MealOrchestrator", session_id=session_id)
-
-#     # 4. Check State after run
-#     status = await adk_session.get("workflow_status", session_id=session_id)
-#     options = await adk_session.get("food_options", session_id=session_id)
-
-#     # 5. Sync to DB (So UI can poll it)
-#     db_manager.update_session_status(session_id, status, options)
-
-#     return {
-#         "session_id": session_id,
-#         "status": status,
-#         "options": options
-#     }
+@app.post("/api/users/{user_id}/meals/{meal_type}/trigger")
+async def trigger_workflow(user_id: str, meal_type: str):
+    try:
+        AutoNomLogger.workflow_trigger_panel(user_id, meal_type)
+        AutoNomLogger.workflow_mock_warning()
+        
+        mock_response = {
+            "session_id": f"session_{user_id}_{meal_type}_{int(datetime.now().timestamp())}",
+            "status": "MOCK_TRIGGERED",
+            "user_id": user_id,
+            "meal_type": meal_type,
+            "message": "Workflow triggered successfully (mock)",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        AutoNomLogger.workflow_trigger_success(user_id, meal_type)
+        return mock_response
+        
+    except Exception as e:
+        AutoNomLogger.workflow_trigger_error(user_id, meal_type, str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to trigger workflow: {str(e)}")
 
 
 # @app.get("/api/sessions/{session_id}")

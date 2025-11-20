@@ -2,6 +2,7 @@ import sqlite3
 import json
 from pathlib import Path
 from typing import Any, Optional, Dict, List
+from src.utils.logger import DatabaseLogger
 
 CURRENT_DIR = Path(__file__).parent
 DB_PATH = CURRENT_DIR / "data/autonom.db"
@@ -48,7 +49,8 @@ def init_db() -> None:
             status TEXT
         );
         """)
-        print(f"✅ Database initialized at: {DB_PATH}")
+        
+        DatabaseLogger.database_initialized(str(DB_PATH))
 
 # --- User Helpers ---
 
@@ -57,36 +59,47 @@ def upsert_user(user_id: str, name: str, preferences: Any, allergies: Any, sched
     """
     Creates or updates a user profile, including their schedule.
     """
-    with get_connection() as conn:
-        conn.execute(
-            """
-            INSERT OR REPLACE INTO users (id, name, preferences, allergies, schedule) 
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (
-                user_id,
-                name,
-                json.dumps(preferences),
-                json.dumps(allergies),
-                json.dumps(schedule)  # Save schedule as JSON
+    try:
+        with get_connection() as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO users (id, name, preferences, allergies, schedule) 
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    user_id,
+                    name,
+                    json.dumps(preferences),
+                    json.dumps(allergies),
+                    json.dumps(schedule)
+                )
             )
-        )
+            DatabaseLogger.user_saved(name, user_id)
+    except Exception as e:
+        DatabaseLogger.user_save_error(name, str(e))
+        raise
 
 
 def get_all_users() -> List[Dict[str, Any]]:
-    with get_connection() as conn:
-        rows = conn.execute("SELECT * FROM users").fetchall()
-        users: List[Dict[str, Any]] = []
-        for r in rows:
-            u = dict(r)
-            # Parse JSON fields back to objects for the API
-            u['preferences'] = json.loads(
-                u['preferences']) if u['preferences'] else []
-            u['allergies'] = json.loads(
-                u['allergies']) if u['allergies'] else []
-            u['schedule'] = json.loads(u['schedule']) if u['schedule'] else {}
-            users.append(u)
-        return users
+    try:
+        with get_connection() as conn:
+            rows = conn.execute("SELECT * FROM users").fetchall()
+            users: List[Dict[str, Any]] = []
+            for r in rows:
+                u = dict(r)
+                # Parse JSON fields back to objects for the API
+                u['preferences'] = json.loads(
+                    u['preferences']) if u['preferences'] else []
+                u['allergies'] = json.loads(
+                    u['allergies']) if u['allergies'] else []
+                u['schedule'] = json.loads(u['schedule']) if u['schedule'] else {}
+                users.append(u)
+            
+            DatabaseLogger.users_retrieved(len(users))
+            return users
+    except Exception as e:
+        DatabaseLogger.user_retrieval_error(str(e))
+        raise
 
 # --- Session Helpers ---
 
