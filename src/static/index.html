@@ -293,44 +293,122 @@
         };
 
         // --- 2. INIT UI ---
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             renderDays();
             renderAllergies();
             renderMockHistory();
+            
+            // Load users from API and populate dropdown
+            await populateUserDropdown();
             
             // Load default user
             loadUser("user_1");
         });
 
-        // --- 3. CORE LOGIC ---
+        async function populateUserDropdown() {
+            try {
+                const users = await fetchUsers();
+                const select = document.getElementById('user-select');
+                
+                // Keep existing mock options for now, but could be replaced with real users
+                // users.forEach(user => {
+                //     const option = document.createElement('option');
+                //     option.value = user.id;
+                //     option.textContent = user.name;
+                //     select.appendChild(option);
+                // });
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        // --- 3. API FUNCTIONS ---
         
-        function loadUser(userId) {
-            const user = mockUsers[userId];
+        async function fetchUsers() {
+            try {
+                const response = await fetch('/api/users');
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching users:', error);
+                return [];
+            }
+        }
+
+        async function saveUserToAPI(userData) {
+            try {
+                const response = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(userData)
+                });
+                return await response.json();
+            } catch (error) {
+                console.error('Error saving user:', error);
+                throw error;
+            }
+        }
+
+        // --- 4. CORE LOGIC ---
+        
+        async function loadUser(userId) {
+            const users = await fetchUsers();
+            const user = users.find(u => u.id === userId) || mockUsers[userId];
             if(!user) return;
 
             // 1. Update Profile Inputs
-            document.getElementById('input-name').value = user.name;
-            document.getElementById('input-instructions').value = user.instructions;
+            document.getElementById('input-name').value = user.name || '';
+            document.getElementById('input-instructions').value = user.instructions || '';
 
             // 2. Update Tags
             const tagContainer = document.getElementById('pref-tags');
             tagContainer.innerHTML = '';
-            user.preferences.forEach(pref => addPreferenceTag(pref));
+            if (user.preferences) {
+                user.preferences.forEach(pref => addPreferenceTag(pref));
+            }
 
-            // 3. Update Meal Slots (In Profile) and Saved Meals (In Meals Tab)
-            const slotsContainer = document.getElementById('meal-slots-container');
-            const savedMealsContainer = document.getElementById('saved-meals-container');
-            
-            slotsContainer.innerHTML = '';
-            savedMealsContainer.innerHTML = '';
-
-            user.meals.forEach(meal => {
-                // Add to Profile
-                addMealSlot(meal.type, meal.start, meal.end);
-                
-                // Add to Meals Tab
-                renderSavedMealCard(meal);
+            // 3. Update allergies selection
+            const allergyCards = document.querySelectorAll('.allergy-card');
+            allergyCards.forEach(card => {
+                const allergyName = card.querySelector('span').textContent;
+                if (user.allergies && user.allergies.includes(allergyName)) {
+                    card.classList.add('ring-2', 'ring-primary-500', 'bg-slate-800', 'text-primary-400');
+                } else {
+                    card.classList.remove('ring-2', 'ring-primary-500', 'bg-slate-800', 'text-primary-400');
+                }
             });
+
+            // 4. Update Schedule (days and meal slots)
+            if (user.schedule) {
+                // Update day selections
+                const dayButtons = document.querySelectorAll('.day-selector');
+                dayButtons.forEach((btn, index) => {
+                    const dayKey = days[index].toLowerCase();
+                    if (user.schedule.days && user.schedule.days.includes(dayKey)) {
+                        btn.className = `w-full aspect-square rounded-full border-none bg-primary-600 text-white font-bold text-sm shadow-lg shadow-primary-500/30 flex items-center justify-center day-selector`;
+                    } else {
+                        btn.className = `w-full aspect-square rounded-full border border-slate-700 bg-slate-800 text-slate-400 font-bold text-sm hover:border-primary-500 hover:text-white transition-all flex items-center justify-center day-selector`;
+                    }
+                });
+
+                // Update meal slots
+                const slotsContainer = document.getElementById('meal-slots-container');
+                const savedMealsContainer = document.getElementById('saved-meals-container');
+                
+                slotsContainer.innerHTML = '';
+                savedMealsContainer.innerHTML = '';
+
+                if (user.schedule.meals) {
+                    user.schedule.meals.forEach(meal => {
+                        // Add to Profile
+                        addMealSlot(meal.type, meal.start, meal.end);
+                        
+                        // Add to Meals Tab
+                        renderSavedMealCard(meal);
+                    });
+                }
+            }
 
             // Simulate "Fetching" effect
             document.body.classList.add('opacity-50');
@@ -514,15 +592,44 @@
             });
         }
 
-        // Save Simulation
-        function saveProfile() {
+        // Save Profile to API
+        async function saveProfile() {
             const btn = document.getElementById('save-btn');
             const originalContent = btn.innerHTML;
             
             btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Saving...`;
             btn.classList.add('opacity-75', 'cursor-not-allowed');
             
-            setTimeout(() => {
+            try {
+                // Collect form data
+                const currentUserId = document.getElementById('user-select').value;
+                const userData = {
+                    id: currentUserId,
+                    name: document.getElementById('input-name').value,
+                    preferences: Array.from(document.querySelectorAll('#pref-tags > div')).map(tag => tag.querySelector('span').textContent),
+                    allergies: Array.from(document.querySelectorAll('.allergy-card.ring-2')).map(card => card.querySelector('span').textContent),
+                    schedule: {
+                        days: Array.from(document.querySelectorAll('.day-selector.bg-primary-600')).map((btn, index) => {
+                            const allDayButtons = Array.from(document.querySelectorAll('.day-selector'));
+                            const buttonIndex = allDayButtons.indexOf(btn);
+                            return days[buttonIndex].toLowerCase();
+                        }),
+                        meals: Array.from(document.querySelectorAll('#meal-slots-container > div')).map(slot => {
+                            const select = slot.querySelector('select');
+                            const timeInputs = slot.querySelectorAll('input[type="time"]');
+                            return {
+                                type: select.value,
+                                start: timeInputs[0].value,
+                                end: timeInputs[1].value
+                            };
+                        }),
+                        instructions: document.getElementById('input-instructions').value
+                    }
+                };
+
+                // Save to API
+                const result = await saveUserToAPI(userData);
+                
                 btn.innerHTML = `<i class="fa-solid fa-check mr-2"></i> Saved Successfully`;
                 btn.classList.remove('from-blue-600', 'to-blue-500');
                 btn.classList.add('from-green-600', 'to-green-500');
@@ -533,8 +640,20 @@
                     btn.classList.remove('from-green-600', 'to-green-500', 'opacity-75', 'cursor-not-allowed');
                 }, 2000);
                 
-                console.log("Profile Saved (Mock)");
-            }, 1500);
+                console.log("Profile Saved Successfully:", result);
+            } catch (error) {
+                btn.innerHTML = `<i class="fa-solid fa-exclamation-triangle mr-2"></i> Save Failed`;
+                btn.classList.remove('from-blue-600', 'to-blue-500');
+                btn.classList.add('from-red-600', 'to-red-500');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalContent;
+                    btn.classList.add('from-blue-600', 'to-blue-500');
+                    btn.classList.remove('from-red-600', 'to-red-500', 'opacity-75', 'cursor-not-allowed');
+                }, 3000);
+                
+                console.error("Error saving profile:", error);
+            }
         }
 
     </script>

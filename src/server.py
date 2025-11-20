@@ -31,7 +31,7 @@ async def list_users():
 @app.post("/api/users")
 async def create_user(user: UserProfile) -> dict[str, Any]:
     db_manager.upsert_user(
-        user.id, user.name, user.preferences, user.allergies)
+        user.id, user.name, user.preferences, user.allergies, user.schedule)
     return {"status": "success", "user_id": user.id}
 
 # --- Workflow APIs ---
