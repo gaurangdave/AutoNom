@@ -306,6 +306,43 @@ class AutoNomLogger:
             title="❌ Workflow Error",
             border_style="red"
         ))
+    
+    @staticmethod
+    @staticmethod
+    def api_called_panel(method: str, endpoint: str, params: Optional[Dict[str, Any]] = None, 
+                        user_id: Optional[str] = None, request_id: Optional[str] = None):
+        """Display a generic API call panel for logging method and parameters."""
+        # Build the content string
+        content_lines = [f"[bold cyan]API Call: {method.upper()} {endpoint}[/bold cyan]"]
+        
+        # Add timestamp
+        content_lines.append(f"[yellow]Timestamp:[/yellow] {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        # Add user ID if provided
+        if user_id:
+            content_lines.append(f"[yellow]User ID:[/yellow] {user_id}")
+        
+        # Add request ID if provided
+        if request_id:
+            content_lines.append(f"[yellow]Request ID:[/yellow] {request_id}")
+        
+        # Add parameters if provided
+        if params:
+            content_lines.append("[yellow]Parameters:[/yellow]")
+            for key, value in params.items():
+                # Truncate long values for readability
+                display_value = str(value)
+                if len(display_value) > 100:
+                    display_value = display_value[:97] + "..."
+                content_lines.append(f"  [cyan]└─ {key}:[/cyan] {display_value}")
+        
+        content = "\n".join(content_lines)
+        
+        console.print(Panel(
+            content,
+            title="🌐 API Call",
+            border_style="blue"
+        ))
 
 # Database logging functions
 class DatabaseLogger:

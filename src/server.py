@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 # Local Imports
 from src.agentic_workflows.auto_nom import AutoNom
 from src.db import db_manager
-from src.schema.users import UserProfile
+from src.schema.users import ResumeRequest, UserProfile
 from src.utils.logger import AutoNomLogger
 
 # Lifespan context manager
@@ -33,6 +33,7 @@ app.mount("/static", StaticFiles(directory="./src/static"), name="static")
 
 @app.get("/api/")
 async def root():
+    AutoNomLogger.api_called_panel("GET", "/api/")
     AutoNomLogger.health_check()
     return {"message": "Hello Auto Nom", "status": "healthy", "timestamp": datetime.now().isoformat()}
 
@@ -42,6 +43,7 @@ async def root():
 @app.get("/api/users")
 async def list_users():
     try:
+        AutoNomLogger.api_called_panel("GET", "/api/users")
         AutoNomLogger.fetching_users()
         users = db_manager.get_all_users()
         AutoNomLogger.users_retrieved_table(users)
@@ -55,6 +57,12 @@ async def list_users():
 @app.post("/api/users")
 async def create_user(user: UserProfile) -> dict[str, Any]:
     try:
+        AutoNomLogger.api_called_panel(
+            "POST",
+            "/api/users",
+            params={"user_id": user.id, "name": user.name,
+                    "preferences_count": len(user.preferences)}
+        )
         AutoNomLogger.user_operation_panel_from_profile(user)
 
         db_manager.upsert_user(user)
@@ -73,6 +81,12 @@ async def create_user(user: UserProfile) -> dict[str, Any]:
 @app.post("/api/users/{user_id}/meals/{meal_type}/trigger")
 async def trigger_workflow(user_id: str, meal_type: str):
     try:
+        AutoNomLogger.api_called_panel(
+            "POST",
+            f"/api/users/{user_id}/meals/{meal_type}/trigger",
+            params={"user_id": user_id, "meal_type": meal_type},
+            user_id=user_id
+        )
         AutoNomLogger.workflow_trigger_panel(user_id, meal_type)
         # step 1: Read preferences, allergies & special_instructions from database
         AutoNomLogger.log_info("Step 1: Get User Details")
@@ -94,15 +108,65 @@ async def trigger_workflow(user_id: str, meal_type: str):
 
         # Use the new SSE event stream method from AutoNom class
         return StreamingResponse(
-            auto_nom.get_sse_event_stream(user_input), 
+            auto_nom.get_sse_event_stream(user_input),
             media_type="text/event-stream"
         )
-
-
     except Exception as e:
         AutoNomLogger.workflow_trigger_error(user_id, meal_type, str(e))
         raise HTTPException(
             status_code=500, detail=f"Failed to trigger workflow: {str(e)}")
+
+
+@app.post("/api/sessions/{session_id}/resume")
+async def resume_workflow(session_id: str, req: ResumeRequest):
+    """
+    PHASE 2: Handle User Input & Finish.
+    """
+    try:
+        AutoNomLogger.api_called_panel(
+            "POST",
+            f"/api/sessions/{session_id}/resume",
+            params={"choice": req.choice},
+        )
+        
+        # step 1: Get the user_id for the given session_id
+        session = db_manager.get_session_by_id(session_id=session_id)
+        
+        if not session:
+            AutoNomLogger.log_error(f"Cannot fine session for {session_id}", "RESUME_WORKFLOW")
+            raise HTTPException(status_code=404, detail=f"Cannot fine session for {session_id}")
+        
+        user_id = session.user_id
+        
+        # step 2: Load user preferences from user id
+        current_user = db_manager.get_user(user_id=user_id)
+        if current_user:
+            AutoNomLogger.log_debug(
+                f"Found user: {current_user.id}",
+                "USER_DETAILS",
+                **current_user.model_dump()
+            )
+        else:
+            AutoNomLogger.log_error(
+                f"Step 1 Failed - Cannot find user with ID {user_id}")
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # step 3: trigger the agent with user input
+        # TODO: Add a logic to save the started session from preventing multiple runs
+        auto_nom = AutoNom(current_user, session_id=session_id)
+        user_input = f"{req.choice}"
+
+        # Use the new SSE event stream method from AutoNom class
+        return StreamingResponse(
+            auto_nom.get_sse_event_stream(user_input),
+            media_type="text/event-stream"
+        )
+     
+    except Exception as e:
+        AutoNomLogger.log_error(
+            f"Failed to resume workflow for session : {session_id}", "RESUME_WORKFLOW", e)
+        raise HTTPException(
+            status_code=500, detail=f"Failed to resume workflow: {str(e)}")
 
 
 # @app.get("/api/sessions/{session_id}")
@@ -114,29 +178,6 @@ async def trigger_workflow(user_id: str, meal_type: str):
 #     if not session:
 #         raise HTTPException(status_code=404, detail="Session not found")
 #     return session
-
-
-# @app.post("/api/sessions/{session_id}/resume")
-# async def resume_workflow(session_id: str, req: ResumeRequest):
-#     """
-#     PHASE 2: Handle User Input & Finish.
-#     """
-#     adk_session = adk.get_service(SessionService)
-
-#     # 1. Inject User Choice into ADK State
-#     await adk_session.set("workflow_status", "USER_APPROVAL_RECEIVED", session_id=session_id)
-#     await adk_session.set("user_choice", req.choice, session_id=session_id)
-
-#     # 2. Wake up Orchestrator (It handles Phase 2)
-#     await adk.run_agent("MealOrchestrator", session_id=session_id)
-
-#     # 3. Get Final Status
-#     final_status = await adk_session.get("workflow_status", session_id=session_id)
-
-#     # 4. Update DB
-#     db_manager.update_session_status(session_id, final_status)
-
-#     return {"status": final_status}
 
 
 # catch all route everything to frontend

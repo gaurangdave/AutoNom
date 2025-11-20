@@ -2,8 +2,9 @@ import sqlite3
 import json
 from pathlib import Path
 from typing import Any, Optional, Dict, List
+from datetime import datetime
 from src.utils.logger import DatabaseLogger
-from src.schema.users import UserProfile
+from src.schema.users import UserProfile, Session
 
 CURRENT_DIR = Path(__file__).parent
 DB_PATH = CURRENT_DIR / "data/autonom.db"
@@ -37,18 +38,17 @@ def init_db() -> None:
             # Column already exists, ignore the error
             pass
         # Sessions Table
-        # let the ADK create session and other related tables
-        # conn.execute("""
-        # CREATE TABLE IF NOT EXISTS sessions (
-        #     id TEXT PRIMARY KEY,
-        #     user_id TEXT,
-        #     meal_type TEXT,
-        #     status TEXT,
-        #     current_options TEXT,
-        #     chosen_option TEXT,
-        #     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        # );
-        # """)
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS sessions (
+            app_name VARCHAR(128) NOT NULL, 
+            user_id VARCHAR(128) NOT NULL, 
+            id VARCHAR(128) NOT NULL, 
+            state TEXT NOT NULL, 
+            create_time DATETIME NOT NULL, 
+            update_time DATETIME NOT NULL, 
+            PRIMARY KEY (app_name, user_id, id)
+        );
+        """)
         # Orders Table
         conn.execute("""
         CREATE TABLE IF NOT EXISTS orders (
@@ -164,34 +164,192 @@ def get_user(user_id: str) -> Optional[UserProfile]:
 # --- Session Helpers ---
 
 
-def create_session(session_id: str, user_id: str, meal_type: str, status: str = "INITIALIZE") -> None:
-    with get_connection() as conn:
-        conn.execute(
-            "INSERT INTO sessions (id, user_id, meal_type, status) VALUES (?, ?, ?, ?)",
-            (session_id, user_id, meal_type, status)
-        )
-
-
-def update_session_status(session_id: str, status: str, options: Optional[Any] = None) -> None:
-    with get_connection() as conn:
-        if options:
-            conn.execute("UPDATE sessions SET status = ?, current_options = ? WHERE id = ?",
-                         (status, json.dumps(options), session_id))
-        else:
+def create_session(app_name: str, user_id: str, session_id: str, state: Dict[str, Any]) -> Session:
+    """
+    Creates a new session with the given app_name, user_id, session_id and state.
+    Returns the created Session object.
+    """
+    try:
+        current_time = datetime.now()
+        with get_connection() as conn:
             conn.execute(
-                "UPDATE sessions SET status = ? WHERE id = ?", (status, session_id))
+                "INSERT INTO sessions (app_name, user_id, id, state, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?)",
+                (app_name, user_id, session_id, json.dumps(state), current_time, current_time)
+            )
+            DatabaseLogger.user_saved(f"Session {session_id[:8]}...", f"{app_name}:{user_id}")
+            
+            # Return the created session as a Session object
+            return Session(
+                app_name=app_name,
+                user_id=user_id,
+                id=session_id,
+                state=state,
+                create_time=current_time,
+                update_time=current_time
+            )
+    except Exception as e:
+        DatabaseLogger.user_save_error(f"Session {session_id[:8]}...", str(e))
+        raise
 
 
-def get_session(session_id: str) -> Optional[Dict[str, Any]]:
-    with get_connection() as conn:
-        row = conn.execute(
-            "SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
-        if row:
-            d = dict(row)
-            if d['current_options']:
-                d['current_options'] = json.loads(d['current_options'])
-            return d
-        return None
+def update_session_state(app_name: str, user_id: str, session_id: str, state: Dict[str, Any]) -> Optional[Session]:
+    """
+    Updates the state of an existing session.
+    Returns the updated Session object if successful, None if session not found.
+    """
+    try:
+        current_time = datetime.now()
+        with get_connection() as conn:
+            cursor = conn.execute(
+                "UPDATE sessions SET state = ?, update_time = ? WHERE app_name = ? AND user_id = ? AND id = ?",
+                (json.dumps(state), current_time, app_name, user_id, session_id)
+            )
+            if cursor.rowcount > 0:
+                # Return the updated session
+                return Session(
+                    app_name=app_name,
+                    user_id=user_id,
+                    id=session_id,
+                    state=state,
+                    create_time=current_time,  # We don't have the original create_time, using current
+                    update_time=current_time
+                )
+            return None
+    except Exception as e:
+        DatabaseLogger.user_save_error(f"Update session {session_id[:8]}...", str(e))
+        raise
+
+
+def get_session(app_name: str, user_id: str, session_id: str) -> Optional[Session]:
+    """
+    Retrieves a session by app_name, user_id, and session_id.
+    Returns a Session object or None if not found.
+    """
+    try:
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM sessions WHERE app_name = ? AND user_id = ? AND id = ?", 
+                (app_name, user_id, session_id)
+            ).fetchone()
+            if row:
+                session_data = dict(row)
+                # Parse the JSON state back to a dictionary
+                state: Dict[str, Any] = json.loads(session_data['state']) if session_data['state'] else {}
+                
+                return Session(
+                    app_name=session_data['app_name'],
+                    user_id=session_data['user_id'],
+                    id=session_data['id'],
+                    state=state,
+                    create_time=datetime.fromisoformat(session_data['create_time']),
+                    update_time=datetime.fromisoformat(session_data['update_time'])
+                )
+            return None
+    except Exception as e:
+        DatabaseLogger.user_retrieval_error(str(e))
+        raise
+
+
+def get_session_by_id(session_id: str) -> Optional[Session]:
+    """
+    Retrieves a session using just the session ID.
+    Note: This may return multiple sessions if the same ID exists across different apps/users.
+    Returns the first match found as a Session object.
+    """
+    try:
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM sessions WHERE id = ? LIMIT 1", 
+                (session_id,)
+            ).fetchone()
+            if row:
+                session_data = dict(row)
+                # Parse the JSON state back to a dictionary
+                state: Dict[str, Any] = json.loads(session_data['state']) if session_data['state'] else {}
+                
+                return Session(
+                    app_name=session_data['app_name'],
+                    user_id=session_data['user_id'],
+                    id=session_data['id'],
+                    state=state,
+                    create_time=datetime.fromisoformat(session_data['create_time']),
+                    update_time=datetime.fromisoformat(session_data['update_time'])
+                )
+            return None
+    except Exception as e:
+        DatabaseLogger.user_retrieval_error(str(e))
+        raise
+
+
+def get_user_sessions(app_name: str, user_id: str) -> List[Session]:
+    """
+    Retrieves all sessions for a specific app_name and user_id.
+    Returns a list of Session objects.
+    """
+    try:
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM sessions WHERE app_name = ? AND user_id = ? ORDER BY update_time DESC", 
+                (app_name, user_id)
+            ).fetchall()
+            sessions: List[Session] = []
+            for row in rows:
+                session_data: Dict[str, Any] = dict(row)
+                # Parse the JSON state back to a dictionary
+                state: Dict[str, Any] = json.loads(session_data['state']) if session_data['state'] else {}
+                
+                session = Session(
+                    app_name=session_data['app_name'],
+                    user_id=session_data['user_id'],
+                    id=session_data['id'],
+                    state=state,
+                    create_time=datetime.fromisoformat(session_data['create_time']),
+                    update_time=datetime.fromisoformat(session_data['update_time'])
+                )
+                sessions.append(session)
+            return sessions
+    except Exception as e:
+        DatabaseLogger.user_retrieval_error(str(e))
+        raise
+
+
+def get_session_state_val(session_id: str, key: str) -> Optional[Any]:
+    """
+    Retrieves a specific state value from a session using session_id and key.
+    Returns None if session not found or key doesn't exist in state.
+    """
+    try:
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT state FROM sessions WHERE id = ? LIMIT 1", 
+                (session_id,)
+            ).fetchone()
+            if row:
+                state_json = row['state']
+                if state_json:
+                    state = json.loads(state_json)
+                    return state.get(key)
+            return None
+    except Exception as e:
+        DatabaseLogger.user_retrieval_error(str(e))
+        raise
+
+
+def delete_session(app_name: str, user_id: str, session_id: str) -> bool:
+    """
+    Deletes a session by app_name, user_id, and session_id.
+    Returns True if session was deleted, False if not found.
+    """
+    try:
+        with get_connection() as conn:
+            cursor = conn.execute(
+                "DELETE FROM sessions WHERE app_name = ? AND user_id = ? AND id = ?", 
+                (app_name, user_id, session_id)
+            )
+            return cursor.rowcount > 0
+    except Exception as e:
+        DatabaseLogger.user_save_error(f"Delete session {session_id[:8]}...", str(e))
+        raise
 
 
 if __name__ == "__main__":
