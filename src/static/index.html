@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto-Nom | Concierge Agent</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Tailwind Configuration for Custom Colors -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            850: '#1e293b', // Custom darker slate
+                            900: '#0f172a',
+                        },
+                        primary: {
+                            500: '#3b82f6', // Blue
+                            600: '#2563eb',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569; 
+        }
+        
+        /* Smooth Fade In */
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-200 font-sans min-h-screen selection:bg-primary-500 selection:text-white">
+
+    <!-- Header -->
+    <header class="fixed top-0 w-full bg-slate-900/80 backdrop-blur-md border-b border-slate-800 z-50">
+        <div class="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-gradient-to-tr from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                    <i class="fa-solid fa-robot text-white text-lg"></i>
+                </div>
+                <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400 hidden sm:block">
+                    Auto-Nom
+                </h1>
+            </div>
+            
+            <!-- User Switcher (New) -->
+            <div class="flex items-center gap-3">
+                <div class="relative group">
+                    <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg blur opacity-30 group-hover:opacity-75 transition duration-200"></div>
+                    <select id="user-select" onchange="loadUser(this.value)" class="relative bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-48 p-2.5 outline-none cursor-pointer">
+                        <option value="user_1">Tony Stark (Admin)</option>
+                        <option value="user_2">Bruce Wayne</option>
+                        <option value="user_3">Peter Parker</option>
+                    </select>
+                </div>
+                <div class="text-xs font-mono text-slate-500 hidden sm:block">v0.1.0</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="pt-24 pb-12 px-4 max-w-3xl mx-auto">
+
+        <!-- Tabs (Updated) -->
+        <div class="flex space-x-1 bg-slate-800/50 p-1 rounded-xl mb-8 border border-slate-700/50 backdrop-blur-sm">
+            <button onclick="switchTab('profile')" id="tab-profile" class="tab-btn flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 bg-slate-700 text-white shadow-sm">
+                <i class="fa-solid fa-user-gear mr-2"></i> Profile
+            </button>
+            <button onclick="switchTab('meals')" id="tab-meals" class="tab-btn flex-1 py-2.5 px-4 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-700/50 transition-all duration-200">
+                <i class="fa-solid fa-utensils mr-2"></i> My Meals
+            </button>
+            <button onclick="switchTab('status')" id="tab-status" class="tab-btn flex-1 py-2.5 px-4 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-700/50 transition-all duration-200">
+                <i class="fa-solid fa-list-check mr-2"></i> Status
+            </button>
+        </div>
+
+        <!-- PROFILE TAB -->
+        <div id="view-profile" class="view-section fade-in space-y-8">
+            
+            <!-- Section: Personal Info -->
+            <section class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl shadow-black/20">
+                <h2 class="text-lg font-semibold text-white mb-4 flex items-center">
+                    <i class="fa-regular fa-id-card text-primary-500 mr-3"></i> Personal Details
+                </h2>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">First Name</label>
+                    <input type="text" id="input-name" value="Tony" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all placeholder-slate-600">
+                </div>
+            </section>
+
+            <!-- Section: Schedule -->
+            <section class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl shadow-black/20">
+                <h2 class="text-lg font-semibold text-white mb-4 flex items-center">
+                    <i class="fa-regular fa-calendar text-primary-500 mr-3"></i> Delivery Days
+                </h2>
+                <div class="flex justify-between gap-2">
+                    <!-- Days Generated by JS to keep code clean -->
+                    <div id="days-container" class="contents">
+                        <!-- Checkboxes injected here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section: Meal Slots -->
+            <section class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl shadow-black/20">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-semibold text-white flex items-center">
+                        <i class="fa-regular fa-clock text-primary-500 mr-3"></i> Meal Schedule
+                    </h2>
+                    <button onclick="addMealSlot()" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-md transition-colors">
+                        <i class="fa-solid fa-plus mr-1"></i> Add Slot
+                    </button>
+                </div>
+                <div id="meal-slots-container" class="space-y-3">
+                    <!-- Dynamic slots will appear here -->
+                </div>
+            </section>
+
+            <!-- Section: Preferences -->
+            <section class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl shadow-black/20">
+                <h2 class="text-lg font-semibold text-white mb-4 flex items-center">
+                    <i class="fa-solid fa-sliders text-primary-500 mr-3"></i> Preferences
+                </h2>
+                <div class="flex gap-2 mb-4">
+                    <input type="text" id="pref-input" placeholder="e.g., Low Sodium, No Cilantro..." 
+                           class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-primary-500">
+                    <button onclick="addPreference()" class="bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-lg transition-colors">
+                        Add
+                    </button>
+                </div>
+                <div id="pref-tags" class="flex flex-wrap gap-2 min-h-[40px]">
+                    <!-- Tags appear here -->
+                </div>
+            </section>
+
+            <!-- Section: Allergies -->
+            <section class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl shadow-black/20">
+                <h2 class="text-lg font-semibold text-white mb-4 flex items-center">
+                    <i class="fa-solid fa-triangle-exclamation text-red-500 mr-3"></i> Allergies
+                </h2>
+                <div class="grid grid-cols-3 sm:grid-cols-4 gap-3" id="allergies-grid">
+                    <!-- Allergy Cards injected by JS -->
+                </div>
+            </section>
+            
+            <!-- Section: Instructions -->
+            <section class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl shadow-black/20">
+                <h2 class="text-lg font-semibold text-white mb-4 flex items-center">
+                    <i class="fa-solid fa-comment-dots text-primary-500 mr-3"></i> Special Instructions
+                </h2>
+                <textarea id="input-instructions" placeholder="Anything else we should know? e.g., Gate code is 1234..." rows="3" 
+                          class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-slate-200 focus:outline-none focus:border-primary-500 transition-all placeholder-slate-600 resize-none"></textarea>
+            </section>
+
+            <!-- Save Button -->
+            <div class="sticky bottom-6">
+                <button onclick="saveProfile()" id="save-btn" class="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-500/25 transform transition-all active:scale-[0.98] flex justify-center items-center">
+                    <span>Save Profile Configuration</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- MEALS TAB (New) -->
+        <div id="view-meals" class="view-section hidden fade-in">
+            <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 mb-6 flex items-start gap-3">
+                <i class="fa-solid fa-circle-info text-blue-400 mt-1"></i>
+                <div class="text-sm text-blue-200">
+                    These are the meal routines configured in your profile. Click "Plan Now" to manually trigger the agent for a specific meal.
+                </div>
+            </div>
+
+            <div id="saved-meals-container" class="space-y-4">
+                <!-- Mock Meal Cards injected by JS -->
+            </div>
+        </div>
+
+        <!-- STATUS TAB -->
+        <div id="view-status" class="view-section hidden fade-in">
+            
+            <!-- Current Status Card -->
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-2xl p-6 mb-8 shadow-xl relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
+                <div class="flex items-start justify-between relative z-10">
+                    <div>
+                        <div class="text-xs font-bold text-green-400 uppercase tracking-widest mb-1">● Active Session</div>
+                        <h2 class="text-2xl font-bold text-white" id="status-title">Lunch Planning</h2>
+                        <p class="text-slate-400 text-sm mt-1" id="status-subtitle">Started today at 11:00 AM</p>
+                    </div>
+                    <div class="h-12 w-12 bg-slate-800 rounded-full flex items-center justify-center border border-slate-700 animate-pulse">
+                        <i class="fa-solid fa-circle-notch fa-spin text-primary-500 text-xl"></i>
+                    </div>
+                </div>
+                
+                <!-- Progress Bar -->
+                <div class="mt-6">
+                    <div class="flex justify-between text-xs text-slate-400 mb-2">
+                        <span>Researching</span>
+                        <span class="text-white font-bold">Verifying</span>
+                        <span>Ordering</span>
+                    </div>
+                    <div class="h-2 bg-slate-700 rounded-full overflow-hidden">
+                        <div class="h-full bg-primary-500 w-2/3 rounded-full relative">
+                            <div class="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Timeline -->
+            <h3 class="text-slate-400 text-sm font-bold uppercase tracking-wider mb-4 ml-1">History</h3>
+            <div class="space-y-0 ml-2 border-l-2 border-slate-800 pl-6 pb-8 relative" id="history-container">
+                <!-- Mock Items injected by JS -->
+            </div>
+            
+        </div>
+
+    </main>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- 1. MOCK DATA ---
+        const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+        const allergiesList = [
+            { name: 'Peanuts', icon: 'fa-bowl-rice' }, 
+            { name: 'Dairy', icon: 'fa-cheese' },
+            { name: 'Gluten', icon: 'fa-bread-slice' },
+            { name: 'Shellfish', icon: 'fa-shrimp' },
+            { name: 'Soy', icon: 'fa-seedling' },
+            { name: 'Eggs', icon: 'fa-egg' },
+            { name: 'Fish', icon: 'fa-fish' },
+            { name: 'Tree Nuts', icon: 'fa-tree' },
+        ];
+
+        // Mock Users for Dropdown
+        const mockUsers = {
+            "user_1": {
+                name: "Tony",
+                preferences: ["High Protein", "Spicy", "Japanese"],
+                allergies: ["Shellfish"],
+                instructions: "Always order extra napkins. Gate code 9000.",
+                meals: [
+                    { id: 1, type: "Lunch", start: "12:00", end: "13:00" },
+                    { id: 2, type: "Dinner", start: "19:00", end: "20:00" }
+                ]
+            },
+            "user_2": {
+                name: "Bruce",
+                preferences: ["Paleo", "No Sugar", "Steak"],
+                allergies: [],
+                instructions: "Deliver to the back cave entrance.",
+                meals: [
+                    { id: 3, type: "Post-Patrol Meal", start: "04:00", end: "05:00" }
+                ]
+            },
+            "user_3": {
+                name: "Peter",
+                preferences: ["Cheap", "Pizza", "Thai"],
+                allergies: ["Peanuts"],
+                instructions: "Don't ring the doorbell, Aunt May is sleeping.",
+                meals: [
+                    { id: 4, type: "Dinner", start: "18:00", end: "19:00" }
+                ]
+            }
+        };
+
+        // --- 2. INIT UI ---
+        document.addEventListener('DOMContentLoaded', () => {
+            renderDays();
+            renderAllergies();
+            renderMockHistory();
+            
+            // Load default user
+            loadUser("user_1");
+        });
+
+        // --- 3. CORE LOGIC ---
+        
+        function loadUser(userId) {
+            const user = mockUsers[userId];
+            if(!user) return;
+
+            // 1. Update Profile Inputs
+            document.getElementById('input-name').value = user.name;
+            document.getElementById('input-instructions').value = user.instructions;
+
+            // 2. Update Tags
+            const tagContainer = document.getElementById('pref-tags');
+            tagContainer.innerHTML = '';
+            user.preferences.forEach(pref => addPreferenceTag(pref));
+
+            // 3. Update Meal Slots (In Profile) and Saved Meals (In Meals Tab)
+            const slotsContainer = document.getElementById('meal-slots-container');
+            const savedMealsContainer = document.getElementById('saved-meals-container');
+            
+            slotsContainer.innerHTML = '';
+            savedMealsContainer.innerHTML = '';
+
+            user.meals.forEach(meal => {
+                // Add to Profile
+                addMealSlot(meal.type, meal.start, meal.end);
+                
+                // Add to Meals Tab
+                renderSavedMealCard(meal);
+            });
+
+            // Simulate "Fetching" effect
+            document.body.classList.add('opacity-50');
+            setTimeout(() => document.body.classList.remove('opacity-50'), 200);
+        }
+
+        function renderSavedMealCard(meal) {
+            const container = document.getElementById('saved-meals-container');
+            const card = document.createElement('div');
+            card.className = "bg-slate-800 border border-slate-700 hover:border-slate-600 rounded-xl p-5 flex items-center justify-between group transition-all hover:shadow-lg hover:shadow-black/20";
+            card.innerHTML = `
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-lg bg-slate-700 flex items-center justify-center text-slate-300 group-hover:text-primary-400 group-hover:bg-slate-700/80 transition-colors">
+                        <i class="fa-solid ${meal.type.includes('Dinner') ? 'fa-moon' : 'fa-sun'} text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-200">${meal.type}</h3>
+                        <div class="text-xs text-slate-500 font-mono mt-1">
+                            <i class="fa-regular fa-clock mr-1"></i> ${meal.start} - ${meal.end}
+                        </div>
+                    </div>
+                </div>
+                <button onclick="triggerPlan('${meal.type}')" class="bg-slate-700 hover:bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                    <span>Plan Now</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            `;
+            container.appendChild(card);
+        }
+
+        function triggerPlan(mealType) {
+            // Simulate triggering the agent
+            const btn = event.currentTarget;
+            const originalContent = btn.innerHTML;
+            
+            btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i>`;
+            
+            setTimeout(() => {
+                // Reset Button
+                btn.innerHTML = originalContent;
+                
+                // Update Status UI
+                document.getElementById('status-title').innerText = `${mealType} Planning`;
+                document.getElementById('status-subtitle').innerText = `Triggered manually just now`;
+                
+                // Switch Tab
+                switchTab('status');
+                
+                // Optional: Show a toast here
+                console.log(`Triggered flow for ${mealType}`);
+            }, 800);
+        }
+
+        // --- 4. RENDER FUNCTIONS (UI COMPONENTS) ---
+
+        function renderDays() {
+            const container = document.getElementById('days-container');
+            days.forEach(day => {
+                const btn = document.createElement('button');
+                btn.className = `w-full aspect-square rounded-full border border-slate-700 bg-slate-800 text-slate-400 font-bold text-sm hover:border-primary-500 hover:text-white transition-all flex items-center justify-center day-selector`;
+                btn.innerText = day;
+                btn.onclick = () => {
+                    if(btn.classList.contains('bg-primary-600')) {
+                        btn.className = `w-full aspect-square rounded-full border border-slate-700 bg-slate-800 text-slate-400 font-bold text-sm hover:border-primary-500 hover:text-white transition-all flex items-center justify-center day-selector`;
+                    } else {
+                        btn.className = `w-full aspect-square rounded-full border-none bg-primary-600 text-white font-bold text-sm shadow-lg shadow-primary-500/30 flex items-center justify-center day-selector`;
+                    }
+                }
+                container.appendChild(btn);
+            });
+        }
+
+        function renderAllergies() {
+            const container = document.getElementById('allergies-grid');
+            allergiesList.forEach(item => {
+                const div = document.createElement('div');
+                div.className = "group cursor-pointer bg-slate-900 border border-slate-700 hover:border-primary-500/50 hover:bg-slate-800 rounded-xl p-3 flex flex-col items-center justify-center transition-all allergy-card";
+                div.onclick = () => {
+                    div.classList.toggle('ring-2');
+                    div.classList.toggle('ring-primary-500');
+                    div.classList.toggle('bg-slate-800');
+                    div.classList.toggle('text-primary-400');
+                };
+                div.innerHTML = `
+                    <i class="fa-solid ${item.icon} text-xl mb-2 text-slate-500 group-hover:text-primary-400 transition-colors"></i>
+                    <span class="text-xs font-medium">${item.name}</span>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Tabs Logic
+        function switchTab(tabName) {
+            // Reset all buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.className = "tab-btn flex-1 py-2.5 px-4 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-700/50 transition-all duration-200";
+            });
+            
+            // Activate current button
+            const activeBtn = document.getElementById(`tab-${tabName}`);
+            if(activeBtn) {
+                activeBtn.className = "tab-btn flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 bg-slate-700 text-white shadow-sm";
+            }
+
+            // Hide all sections
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            
+            // Show current section
+            const activeView = document.getElementById(`view-${tabName}`);
+            if(activeView) activeView.classList.remove('hidden');
+        }
+
+        // Dynamic Meal Slots
+        function addMealSlot(type = "Lunch", start = "12:00", end = "13:00") {
+            const container = document.getElementById('meal-slots-container');
+            const slot = document.createElement('div');
+            slot.className = "flex items-center gap-2 bg-slate-900/50 p-2 rounded-lg border border-slate-700/50 animate-fade-in";
+            slot.innerHTML = `
+                <select class="bg-slate-800 text-xs text-white p-2 rounded border border-slate-700 focus:border-primary-500 outline-none">
+                    <option ${type === 'Breakfast' ? 'selected' : ''}>Breakfast</option>
+                    <option ${type === 'Lunch' ? 'selected' : ''}>Lunch</option>
+                    <option ${type === 'Dinner' ? 'selected' : ''}>Dinner</option>
+                    <option ${!['Breakfast','Lunch','Dinner'].includes(type) ? 'selected' : ''}>${!['Breakfast','Lunch','Dinner'].includes(type) ? type : 'Custom'}</option>
+                </select>
+                <div class="text-slate-500 text-xs">from</div>
+                <input type="time" value="${start}" class="bg-slate-800 text-white text-xs p-2 rounded border border-slate-700 outline-none">
+                <div class="text-slate-500 text-xs">to</div>
+                <input type="time" value="${end}" class="bg-slate-800 text-white text-xs p-2 rounded border border-slate-700 outline-none">
+                <button onclick="this.parentElement.remove()" class="ml-auto text-slate-500 hover:text-red-400 p-2">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            `;
+            container.appendChild(slot);
+        }
+
+        // Preference Tags
+        function addPreference() {
+            const input = document.getElementById('pref-input');
+            const text = input.value.trim();
+            if(text) {
+                addPreferenceTag(text);
+                input.value = "";
+            }
+        }
+
+        function addPreferenceTag(text) {
+            const container = document.getElementById('pref-tags');
+            const tag = document.createElement('div');
+            tag.className = "bg-slate-700 text-slate-200 text-xs px-3 py-1.5 rounded-full flex items-center gap-2 border border-slate-600 animate-fade-in";
+            tag.innerHTML = `
+                <span>${text}</span>
+                <i onclick="this.parentElement.remove()" class="fa-solid fa-xmark cursor-pointer hover:text-white"></i>
+            `;
+            container.appendChild(tag);
+        }
+
+        // Mock History Data
+        function renderMockHistory() {
+            const container = document.getElementById('history-container');
+            const history = [
+                { title: 'Dinner - Sushi', status: 'Delivered', time: 'Yesterday, 7:30 PM', color: 'text-green-400' },
+                { title: 'Lunch - Burrito', status: 'Delivered', time: 'Yesterday, 1:15 PM', color: 'text-green-400' },
+                { title: 'Lunch - Salad', status: 'Cancelled', time: 'Mon, 12:30 PM', color: 'text-red-400' },
+            ];
+
+            container.innerHTML = ''; // Clear existing
+            history.forEach(h => {
+                const item = document.createElement('div');
+                item.className = "relative mb-6 last:mb-0";
+                item.innerHTML = `
+                    <div class="absolute -left-[29px] top-1 w-3 h-3 bg-slate-600 rounded-full border-2 border-slate-900"></div>
+                    <div class="bg-slate-800/50 border border-slate-700/50 rounded-lg p-3 hover:bg-slate-800 transition-colors">
+                        <div class="flex justify-between items-start">
+                            <h4 class="text-sm font-semibold text-slate-200">${h.title}</h4>
+                            <span class="text-xs font-mono ${h.color}">${h.status}</span>
+                        </div>
+                        <div class="text-xs text-slate-500 mt-1">${h.time}</div>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // Save Simulation
+        function saveProfile() {
+            const btn = document.getElementById('save-btn');
+            const originalContent = btn.innerHTML;
+            
+            btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Saving...`;
+            btn.classList.add('opacity-75', 'cursor-not-allowed');
+            
+            setTimeout(() => {
+                btn.innerHTML = `<i class="fa-solid fa-check mr-2"></i> Saved Successfully`;
+                btn.classList.remove('from-blue-600', 'to-blue-500');
+                btn.classList.add('from-green-600', 'to-green-500');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalContent;
+                    btn.classList.add('from-blue-600', 'to-blue-500');
+                    btn.classList.remove('from-green-600', 'to-green-500', 'opacity-75', 'cursor-not-allowed');
+                }, 2000);
+                
+                console.log("Profile Saved (Mock)");
+            }, 1500);
+        }
+
+    </script>
+</body>
+</html>

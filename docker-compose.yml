@@ -1,0 +1,27 @@
+services:
+  autonom-app:
+    build: .
+    container_name: autonom_agent
+    ports:
+      - "8000:8000"
+    volumes:
+      # Syncs local code changes to the container immediately
+      - .:/app
+      # Persist the SQLite DB so data survives restarts
+      - ./src/db:/app/src/db
+    # We override the CMD from the Dockerfile to add the '--reload' flag
+    command: uvicorn src.server:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      # - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      # - DOORDASH_API_URL=http://mock-doordash:8001 (Uncomment when ready)
+    # depends_on:
+    #   - mock-doordash (Uncomment when ready)
+
+  # Mock Service (Commented out for Phase 1)
+  # mock-doordash:
+  #   build: 
+  #     context: ./mock_api
+  #   container_name: mock_doordash_service
+  #   ports:
+  #     - "8001:8001"
