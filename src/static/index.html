@@ -77,9 +77,7 @@
                 <div class="relative group">
                     <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg blur opacity-30 group-hover:opacity-75 transition duration-200"></div>
                     <select id="user-select" onchange="loadUser(this.value)" class="relative bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-48 p-2.5 outline-none cursor-pointer">
-                        <option value="user_1">Tony Stark (Admin)</option>
-                        <option value="user_2">Bruce Wayne</option>
-                        <option value="user_3">Peter Parker</option>
+                        <!-- Options will be populated dynamically -->
                     </select>
                 </div>
                 <div class="text-xs font-mono text-slate-500 hidden sm:block">v0.1.0</div>
@@ -301,8 +299,11 @@
             // Load users from API and populate dropdown
             await populateUserDropdown();
             
-            // Load default user
-            loadUser("user_1");
+            // Load first available user
+            const select = document.getElementById('user-select');
+            if (select.options.length > 0) {
+                await loadUser(select.options[0].value);
+            }
         });
 
         async function populateUserDropdown() {
@@ -310,15 +311,74 @@
                 const users = await fetchUsers();
                 const select = document.getElementById('user-select');
                 
-                // Keep existing mock options for now, but could be replaced with real users
-                // users.forEach(user => {
-                //     const option = document.createElement('option');
-                //     option.value = user.id;
-                //     option.textContent = user.name;
-                //     select.appendChild(option);
-                // });
+                // Clear existing options
+                select.innerHTML = '';
+                
+                // Add "Create New" option first
+                const createNewOption = document.createElement('option');
+                createNewOption.value = 'create_new';
+                createNewOption.textContent = '+ Create New User';
+                createNewOption.style.fontStyle = 'italic';
+                createNewOption.style.color = '#3b82f6';
+                select.appendChild(createNewOption);
+                
+                // Add separator if there are users
+                if (users.length > 0) {
+                    const separator = document.createElement('option');
+                    separator.disabled = true;
+                    separator.textContent = '──────────────';
+                    select.appendChild(separator);
+                }
+                
+                // Add users from API
+                users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = user.name;
+                    select.appendChild(option);
+                });
+                
+                // If no users from API, fall back to mock users
+                if (users.length === 0) {
+                    const separator = document.createElement('option');
+                    separator.disabled = true;
+                    separator.textContent = '──────────────';
+                    select.appendChild(separator);
+                    
+                    Object.keys(mockUsers).forEach(userId => {
+                        const user = mockUsers[userId];
+                        const option = document.createElement('option');
+                        option.value = userId;
+                        option.textContent = user.name;
+                        select.appendChild(option);
+                    });
+                }
             } catch (error) {
                 console.error('Error loading users:', error);
+                // Fall back to mock users on error
+                const select = document.getElementById('user-select');
+                select.innerHTML = '';
+                
+                // Add "Create New" option first
+                const createNewOption = document.createElement('option');
+                createNewOption.value = 'create_new';
+                createNewOption.textContent = '+ Create New User';
+                createNewOption.style.fontStyle = 'italic';
+                createNewOption.style.color = '#3b82f6';
+                select.appendChild(createNewOption);
+                
+                const separator = document.createElement('option');
+                separator.disabled = true;
+                separator.textContent = '──────────────';
+                select.appendChild(separator);
+                
+                Object.keys(mockUsers).forEach(userId => {
+                    const user = mockUsers[userId];
+                    const option = document.createElement('option');
+                    option.value = userId;
+                    option.textContent = user.name;
+                    select.appendChild(option);
+                });
             }
         }
 
@@ -352,14 +412,69 @@
 
         // --- 4. CORE LOGIC ---
         
+        function createNewUser() {
+            // Generate a unique ID for new user
+            const timestamp = Date.now();
+            const newUserId = `user_${timestamp}`;
+            
+            // Reset all form fields
+            document.getElementById('input-name').value = '';
+            document.getElementById('input-instructions').value = '';
+            
+            // Clear preferences tags
+            const tagContainer = document.getElementById('pref-tags');
+            tagContainer.innerHTML = '';
+            
+            // Clear allergy selections
+            const allergyCards = document.querySelectorAll('.allergy-card');
+            allergyCards.forEach(card => {
+                card.classList.remove('ring-2', 'ring-primary-500', 'bg-slate-800', 'text-primary-400');
+            });
+            
+            // Reset day selections
+            const dayButtons = document.querySelectorAll('.day-selector');
+            dayButtons.forEach(btn => {
+                btn.className = `w-full aspect-square rounded-full border border-slate-700 bg-slate-800 text-slate-400 font-bold text-sm hover:border-primary-500 hover:text-white transition-all flex items-center justify-center day-selector`;
+            });
+            
+            // Clear meal slots
+            const slotsContainer = document.getElementById('meal-slots-container');
+            const savedMealsContainer = document.getElementById('saved-meals-container');
+            slotsContainer.innerHTML = '';
+            savedMealsContainer.innerHTML = '';
+            
+            // Update the user select dropdown to show the new user ID
+            const select = document.getElementById('user-select');
+            select.value = 'create_new';
+            
+            // Store the new user ID for saving
+            select.dataset.newUserId = newUserId;
+            
+            // Switch to profile tab
+            switchTab('profile');
+            
+            // Focus on name input
+            document.getElementById('input-name').focus();
+            
+            console.log('Ready to create new user with ID:', newUserId);
+        }
+        
         async function loadUser(userId) {
+            // Handle create new user option
+            if (userId === 'create_new') {
+                createNewUser();
+                return;
+            }
+            
             const users = await fetchUsers();
             const user = users.find(u => u.id === userId) || mockUsers[userId];
             if(!user) return;
 
             // 1. Update Profile Inputs
             document.getElementById('input-name').value = user.name || '';
-            document.getElementById('input-instructions').value = user.instructions || '';
+            // Handle instructions - could be in schedule.instructions for API users or instructions for mock users
+            const instructions = user.schedule?.instructions || user.instructions || '';
+            document.getElementById('input-instructions').value = instructions;
 
             // 2. Update Tags
             const tagContainer = document.getElementById('pref-tags');
@@ -408,6 +523,21 @@
                         renderSavedMealCard(meal);
                     });
                 }
+            } else if (user.meals) {
+                // Handle mock user format
+                const slotsContainer = document.getElementById('meal-slots-container');
+                const savedMealsContainer = document.getElementById('saved-meals-container');
+                
+                slotsContainer.innerHTML = '';
+                savedMealsContainer.innerHTML = '';
+
+                user.meals.forEach(meal => {
+                    // Add to Profile
+                    addMealSlot(meal.type, meal.start, meal.end);
+                    
+                    // Add to Meals Tab
+                    renderSavedMealCard(meal);
+                });
             }
 
             // Simulate "Fetching" effect
@@ -601,8 +731,16 @@
             btn.classList.add('opacity-75', 'cursor-not-allowed');
             
             try {
-                // Collect form data
-                const currentUserId = document.getElementById('user-select').value;
+                // Determine user ID - use new user ID if creating new user
+                const select = document.getElementById('user-select');
+                let currentUserId;
+                
+                if (select.value === 'create_new') {
+                    currentUserId = select.dataset.newUserId || `user_${Date.now()}`;
+                } else {
+                    currentUserId = select.value;
+                }
+                
                 const userData = {
                     id: currentUserId,
                     name: document.getElementById('input-name').value,
@@ -633,6 +771,12 @@
                 btn.innerHTML = `<i class="fa-solid fa-check mr-2"></i> Saved Successfully`;
                 btn.classList.remove('from-blue-600', 'to-blue-500');
                 btn.classList.add('from-green-600', 'to-green-500');
+                
+                // If this was a new user, refresh the dropdown and select the new user
+                if (select.value === 'create_new') {
+                    await populateUserDropdown();
+                    select.value = currentUserId;
+                }
                 
                 setTimeout(() => {
                     btn.innerHTML = originalContent;
