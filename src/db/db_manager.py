@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, Optional, Dict, List
 
 CURRENT_DIR = Path(__file__).parent
-DB_PATH = CURRENT_DIR / "autonom.db"
+DB_PATH = CURRENT_DIR / "data/autonom.db"
 
 
 def get_connection() -> sqlite3.Connection:
@@ -27,17 +27,18 @@ def init_db() -> None:
         );
         """)
         # Sessions Table
-        conn.execute("""
-        CREATE TABLE IF NOT EXISTS sessions (
-            id TEXT PRIMARY KEY,
-            user_id TEXT,
-            meal_type TEXT,
-            status TEXT,
-            current_options TEXT,
-            chosen_option TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        """)
+        # let the ADK create session and other related tables
+        # conn.execute("""
+        # CREATE TABLE IF NOT EXISTS sessions (
+        #     id TEXT PRIMARY KEY,
+        #     user_id TEXT,
+        #     meal_type TEXT,
+        #     status TEXT,
+        #     current_options TEXT,
+        #     chosen_option TEXT,
+        #     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        # );
+        # """)
         # Orders Table
         conn.execute("""
         CREATE TABLE IF NOT EXISTS orders (
