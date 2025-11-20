@@ -13,8 +13,6 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.markdown import Markdown
 from rich.table import Table
-from rich.live import Live
-from rich.spinner import Spinner
 from rich import box
 import json
 load_dotenv()
@@ -22,7 +20,7 @@ load_dotenv()
 console = Console()
 
 # database url
-db_url = "sqlite:///./db/auto_nom.db"
+db_url = "sqlite:///./db/data/auto_nom.db"
 # setting db session service for persistent storage
 session_service = DatabaseSessionService(db_url=db_url)
 
