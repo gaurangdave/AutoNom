@@ -38,7 +38,7 @@ class AutoNom():
         AutoNomLogger.log_info(
             f"Initialized AutoNom for user {self.user.id}, with session : {self.session_id}")
         # private properties # database url
-        self.__db_url = "sqlite:///./src/db/data/auto_nom.db"
+        self.__db_url = "sqlite:///./src/db/data/autonom.db"
         # setting db session service for persistent storage
         self.__session_service = DatabaseSessionService(db_url=self.__db_url)
 

@@ -20,7 +20,7 @@ load_dotenv()
 console = Console()
 
 # database url
-db_url = "sqlite:///./db/data/auto_nom.db"
+db_url = "sqlite:///./db/data/autonom.db"
 # setting db session service for persistent storage
 session_service = DatabaseSessionService(db_url=db_url)
 

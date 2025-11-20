@@ -102,10 +102,21 @@ async def trigger_workflow(user_id: str, meal_type: str):
         # TODO: Add a logic to save the started session from preventing multiple runs
 
         auto_nom = AutoNom(current_user, meal_type=meal_type)
-        auto_nom.run()
-        # AutoNomLogger.workflow_trigger_success(user_id, meal_type)
-        # return mock_response
-        return StreamingResponse(auto_nom.run(), media_type="text/event-stream")
+        # Do not call auto_nom.run() directly here; it returns an async generator.
+        async def sse_event_generator():
+            import json
+            async for item in auto_nom.run():
+                if item is None:
+                    continue
+                try:
+                    data = json.dumps(item)
+                except Exception:
+                    data = json.dumps({"data": str(item)})
+                # SSE format: each message prefixed with "data: " and separated by a blank line
+                yield f"data: {data}\n\n"
+            # final keep-alive/termination event (optional)
+            yield "event: done\ndata: {}\n\n"
+        return StreamingResponse(sse_event_generator(), media_type="text/event-stream")
 
 
     except Exception as e:
