@@ -20,7 +20,7 @@ console = Console()
 
 
 class AutoNom():
-    def __init__(self, user: UserProfile, meal_type: str):
+    def __init__(self, user: UserProfile, meal_type: str = "", session_id: str = ""):
         self._app_name = "auto_nom_agent"
         self.user = user
         self.meal_type = meal_type
@@ -34,7 +34,8 @@ class AutoNom():
             "user_feedback": "",
             "user_choice": []
         }
-        self.session_id = str(uuid.uuid4())
+        self.session_id = session_id if session_id else str(uuid.uuid4())
+
         AutoNomLogger.log_info(
             f"Initialized AutoNom for user {self.user.id}, with session : {self.session_id}")
         # private properties # database url
@@ -137,14 +138,27 @@ class AutoNom():
 
             return response
 
-    async def run(self):
+    async def __get_or_create_session(self):
+        existing_sessions = await self.__session_service.list_sessions(app_name=self._app_name, user_id=self.user.id)
+        if existing_sessions and len(existing_sessions.sessions) > 0 and existing_sessions.sessions[0].id == self.session_id:
+            session_id = existing_sessions.sessions[0].id
+            self.__session = existing_sessions.sessions[0]
+            AutoNomLogger.log_info(
+                f"Loaded existing session:{session_id[:8]}...")
+        else:
+            AutoNomLogger.log_info(
+                f"Creating new session:{self.session_id[:8]}...")
+
+            self.__session = await self.__session_service.create_session(
+                app_name=self._app_name,
+                user_id=self.user.id,
+                session_id=self.session_id,
+                state=self.initial_state
+            )
+
+    async def run(self, user_input:str):
         # Step 1 : Create a new session
-        self.__session = await self.__session_service.create_session(
-            app_name=self._app_name,
-            user_id=self.user.id,
-            session_id=self.session_id,
-            state=self.initial_state
-        )
+        await self.__get_or_create_session()
 
         # Step 2 : Create a new Runner instance
         self.runner = Runner(
@@ -157,7 +171,7 @@ class AutoNom():
         AutoNomLogger.log_info(f"Starting session : {self.session_id}")
 
         # Step 3: Create a user query
-        user_input = f"Plan a {self.meal_type} for {self.user.name}"
+        # user_input = f"Plan a {self.meal_type} for {self.user.name}"
         query = types.Content(role="user", parts=[
             types.Part(text=user_input)])
 
@@ -177,3 +191,26 @@ class AutoNom():
                 agent_name=agent_name, event=event)
 
             yield (response)
+
+    async def get_sse_event_stream(self, user_input: str):
+        """Generate Server-Sent Events stream for real-time communication with client.
+        
+        Args:
+            user_input (str): The input message to process
+            
+        Yields:
+            str: SSE formatted data events
+        """
+        import json
+        async for item in self.run(user_input=user_input):
+            if item is None:
+                continue
+            try:
+                data = json.dumps(item)
+            except Exception:
+                data = json.dumps({"data": str(item)})
+            # SSE format: each message prefixed with "data: " and separated by a blank line
+            yield f"data: {data}\n\n"
+        # final keep-alive/termination event (optional)
+        yield "event: done\ndata: {}\n\n"
+

@@ -74,17 +74,6 @@ async def create_user(user: UserProfile) -> dict[str, Any]:
 async def trigger_workflow(user_id: str, meal_type: str):
     try:
         AutoNomLogger.workflow_trigger_panel(user_id, meal_type)
-        AutoNomLogger.workflow_mock_warning()
-
-        # mock_response = {
-        #     "session_id": f"session_{user_id}_{meal_type}_{int(datetime.now().timestamp())}",
-        #     "status": "MOCK_TRIGGERED",
-        #     "user_id": user_id,
-        #     "meal_type": meal_type,
-        #     "message": "Workflow triggered successfully (mock)",
-        #     "timestamp": datetime.now().isoformat()
-        # }
-
         # step 1: Read preferences, allergies & special_instructions from database
         AutoNomLogger.log_info("Step 1: Get User Details")
         current_user = db_manager.get_user(user_id=user_id)
@@ -100,23 +89,14 @@ async def trigger_workflow(user_id: str, meal_type: str):
             raise HTTPException(status_code=404, detail="User not found")
 
         # TODO: Add a logic to save the started session from preventing multiple runs
-
         auto_nom = AutoNom(current_user, meal_type=meal_type)
-        # Do not call auto_nom.run() directly here; it returns an async generator.
-        async def sse_event_generator():
-            import json
-            async for item in auto_nom.run():
-                if item is None:
-                    continue
-                try:
-                    data = json.dumps(item)
-                except Exception:
-                    data = json.dumps({"data": str(item)})
-                # SSE format: each message prefixed with "data: " and separated by a blank line
-                yield f"data: {data}\n\n"
-            # final keep-alive/termination event (optional)
-            yield "event: done\ndata: {}\n\n"
-        return StreamingResponse(sse_event_generator(), media_type="text/event-stream")
+        user_input = f"Plan a {meal_type} for {current_user.name}"
+
+        # Use the new SSE event stream method from AutoNom class
+        return StreamingResponse(
+            auto_nom.get_sse_event_stream(user_input), 
+            media_type="text/event-stream"
+        )
 
 
     except Exception as e:
