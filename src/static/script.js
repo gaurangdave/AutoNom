@@ -722,9 +722,9 @@ async function saveProfile() {
                         start: timeInputs[0].value,
                         end: timeInputs[1].value
                     };
-                }),
-                instructions: document.getElementById('input-instructions').value
-            }
+                })                
+            },
+            special_instructions: document.getElementById('input-instructions').value
         };
 
         // Save to API

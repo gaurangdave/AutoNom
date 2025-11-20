@@ -2,7 +2,7 @@ import json
 import random
 from typing import Any
 
-from schema.restaurant import Restaurants
+from src.schema.restaurant import Restaurants
 
 # TODO: Define & finalize pydantic types for restaurant
 

@@ -9,6 +9,7 @@ class UserProfile(BaseModel):
     preferences: list[str] = []
     allergies: list[str] = []
     schedule: Dict[str, Any] = {}
+    special_instructions: str = ""
 
 class ResumeRequest(BaseModel):
     choice: int  # 1, 2, or 3

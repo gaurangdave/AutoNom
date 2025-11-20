@@ -1,10 +1,10 @@
 from google.adk.agents import LlmAgent
 # from google.adk.tools.agent_tool import AgentTool
 
-from utils.workflow_utils import get_workflow
+from src.utils.workflow_utils import get_workflow
 from .subagents.meal_planner.agent import meal_planner
 from .subagents.meal_order_executor.agent import meal_order_executor
-from auto_nom_agent.configs import retry_options, model
+from src.auto_nom_agent.configs import retry_options, model
 from google.adk.models.google_llm import Gemini
 workflow = get_workflow()
 

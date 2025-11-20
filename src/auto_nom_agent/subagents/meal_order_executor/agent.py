@@ -5,14 +5,12 @@ from google.adk.agents import LlmAgent
 from google.adk.tools.function_tool import FunctionTool
 from google.adk.tools.tool_context import ToolContext
 
-from auto_nom_agent.tools.common_tools import update_workflow_status
+from src.auto_nom_agent.tools.common_tools import update_workflow_status
 
-from auto_nom_agent.configs import retry_options, model
+from src.auto_nom_agent.configs import retry_options, model
 from google.adk.models.google_llm import Gemini
 
-from schema.restaurant import FoodOrder, OrderStatus
-from rich.panel import Panel
-from rich import box
+from src.schema.restaurant import FoodOrder, OrderStatus
 from rich.table import Table
 
 from rich.console import Console
