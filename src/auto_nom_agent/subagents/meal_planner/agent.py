@@ -139,8 +139,6 @@ restaurant_scout_agent = LlmAgent(
 )
 
 
-
-
 def update_meal_options(options: MealOptions, tool_context: ToolContext) -> dict[str, str]:
     """Saves the selected meal options for the user
 
@@ -156,8 +154,6 @@ def update_meal_options(options: MealOptions, tool_context: ToolContext) -> dict
         "status": "success",
         "message": "meal options are saved successfully"
     }
-
-
 
 
 meal_planner = LlmAgent(
@@ -203,5 +199,6 @@ meal_planner = LlmAgent(
     """,
     tools=[AgentTool(restaurant_scout_agent), FunctionTool(
         update_meal_options), FunctionTool(update_workflow_status)],
-    sub_agents=[meal_choice_verifier]
+    sub_agents=[meal_choice_verifier],
+    output_key="meal_planner_output"
 )

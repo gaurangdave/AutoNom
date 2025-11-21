@@ -102,15 +102,14 @@ meal_order_executor = LlmAgent(
     {user_choice}
 
     ** Your Duties **
-    * Step 1: Inform the user that you are working on executing their order.
-    * Step 2: Extract the required order information from the meal information.
+    * Step 1: Extract the required order information from the meal information.
         * REMEMBER items from the same restaurant will be part of same order.
-    * Step 3: Use `place_food_order` to place each order one at a time.
+    * Step 2: Use `place_food_order` to place each order one at a time.
         * At the end of each order save the response using `update_order_state` tool.    
-    * Once all the orders are placed, inform the user and delegate back to the parent `auto_nom` agent.
-    * IMPORTANT always update workflow status using the `update_workflow_status` tool. Set the status to following values,
+    * Step 3: IMPORTANT always update workflow status using the `update_workflow_status` tool. Set the status to following values,
         * PLACING_ORDER: Before placing the order
-        * ORDER_CONFIRMED: Once all the orders are placed and confirmed.
+        * ORDER_CONFIRMED: Once all the orders are placed and confirmed.        
+    * Once all the orders are placed, inform the user and delegate back to the parent `auto_nom` agent.
     """,
     tools=[FunctionTool(update_order_state), FunctionTool(place_food_order), FunctionTool(update_workflow_status)]
 )
