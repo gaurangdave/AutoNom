@@ -142,12 +142,13 @@ class AutoNom():
             return response
 
     async def __get_or_create_session(self):
-        existing_sessions = await self.__session_service.list_sessions(app_name=self._app_name, user_id=self.user.id)
-        if existing_sessions and len(existing_sessions.sessions) > 0 and existing_sessions.sessions[0].id == self.session_id:
-            session_id = existing_sessions.sessions[0].id
-            self.__session = existing_sessions.sessions[0]
+        existing_sessions = db_manager.get_session_by_id(session_id=self.session_id)
+        # existing_sessions = await self.__session_service.list_sessions(app_name=self._app_name, user_id=self.user.id)
+        if existing_sessions:
+            # session_id = existing_sessions.sessions[0].id
+            # self.__session = existing_sessions.sessions[0]
             AutoNomLogger.log_info(
-                f"Loaded existing session:{session_id[:8]}...")
+                f"Loaded existing session:{self.session_id[:8]}...")
         else:
             AutoNomLogger.log_info(
                 f"Creating new session:{self.session_id[:8]}...")

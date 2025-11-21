@@ -712,14 +712,35 @@ async function submitChatResponse() {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
-        // Close modal
+        // Close modal first
         closeChatModal();
         
         // Handle the resumed event stream
         if (response.headers.get('content-type')?.includes('text/event-stream')) {
             console.log('📡 Resuming event stream with user response...');
             
-            // Handle the event stream similar to triggerPlan
+            // Show streaming state in submit button
+            submitBtn.innerHTML = `<i class="fa-solid fa-satellite-dish fa-pulse"></i> Streaming`;
+            
+            // Update Status UI to show resumption
+            document.getElementById('status-title').innerText = 'Session Resumed';
+            document.getElementById('status-subtitle').innerText = `Processing your response: "${userResponse.substring(0, 50)}${userResponse.length > 50 ? '...' : ''}"`;
+            
+            // Switch to Status tab to show progress
+            switchTab('status');
+            
+            // Expand event stream to show events if it's collapsed
+            const container = document.getElementById('event-stream-container');
+            const icon = document.getElementById('expand-icon');
+            const progress = document.getElementById('simple-progress');
+            
+            if (container.classList.contains('hidden')) {
+                container.classList.remove('hidden');
+                icon.classList.add('rotate-180');
+                progress.style.opacity = '0';
+            }
+            
+            // Handle the event stream
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
@@ -766,24 +787,65 @@ async function submitChatResponse() {
                                 });
                                 renderEventInStream(jsonData, timestamp);
                                 
+                                // Log event details
+                                if (jsonData.type) {
+                                    console.log(`📋 Resumed event type: ${jsonData.type}`);
+                                }
+                                if (jsonData.message) {
+                                    console.log(`💬 Resumed message: ${jsonData.message}`);
+                                }
+                                if (jsonData.status) {
+                                    console.log(`📊 Resumed status: ${jsonData.status}`);
+                                }
+                                
                             } catch (parseError) {
                                 console.log('📄 Raw resumed stream data:', data);
                             }
+                        } else if (line.startsWith('event: ')) {
+                            const eventType = line.slice(7); // Remove 'event: ' prefix
+                            console.log('🎯 Resumed event type:', eventType);
+                        } else if (line.startsWith('id: ')) {
+                            const eventId = line.slice(4); // Remove 'id: ' prefix
+                            console.log('🆔 Resumed event ID:', eventId);
+                        } else {
+                            // Handle other line formats
+                            console.log('📝 Resumed stream line:', line);
                         }
                     }
                 }
             } finally {
                 reader.releaseLock();
             }
+            
+            // Show completion state
+            submitBtn.innerHTML = `<i class="fa-solid fa-check"></i> Completed`;
+            console.log('✅ Resumed workflow stream completed successfully');
+            
+        } else {
+            // Fallback to regular JSON response
+            const result = await response.json();
+            console.log('Workflow resumed successfully:', result);
+            
+            // Show success state briefly
+            submitBtn.innerHTML = `<i class="fa-solid fa-check"></i> Sent`;
+            
+            // Update Status UI
+            document.getElementById('status-title').innerText = 'Session Resumed';
+            document.getElementById('status-subtitle').innerText = 'Response processed successfully';
+            
+            // Switch to Status tab
+            switchTab('status');
         }
         
     } catch (error) {
         console.error('Error submitting chat response:', error);
         alert('Failed to send response. Please try again.');
     } finally {
-        // Reset button
-        submitBtn.innerHTML = originalBtnContent;
-        submitBtn.disabled = false;
+        // Reset button after a delay to show completion
+        setTimeout(() => {
+            submitBtn.innerHTML = originalBtnContent;
+            submitBtn.disabled = false;
+        }, 2000);
     }
 }
 
