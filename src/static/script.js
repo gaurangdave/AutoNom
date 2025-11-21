@@ -646,6 +646,49 @@ function closeChatModal() {
     }
 }
 
+function showCelebratoryMessage(text) {
+    console.log('🎉 Showing celebratory message:', text);
+    
+    // Create a temporary celebration overlay
+    const celebrationOverlay = document.createElement('div');
+    celebrationOverlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    celebrationOverlay.style.animation = 'fadeIn 0.3s ease-in-out';
+    
+    celebrationOverlay.innerHTML = `
+        <div class="bg-gradient-to-br from-green-600 to-green-700 border border-green-500 rounded-2xl max-w-lg mx-4 p-8 text-center shadow-2xl transform animate-bounce">
+            <div class="mb-4">
+                <i class="fa-solid fa-check-circle text-white text-6xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-4">Order Confirmed! 🎉</h3>
+            <div class="bg-white/10 rounded-lg p-4 border border-white/20">
+                <p class="text-white text-lg leading-relaxed">${text}</p>
+            </div>
+            <button onclick="this.closest('.fixed').remove()" class="mt-6 bg-white text-green-700 font-bold px-6 py-3 rounded-lg hover:bg-green-50 transition-colors">
+                <i class="fa-solid fa-thumbs-up mr-2"></i>Awesome!
+            </button>
+        </div>
+    `;
+    
+    // Add to body
+    document.body.appendChild(celebrationOverlay);
+    
+    // Auto-remove after 10 seconds
+    setTimeout(() => {
+        if (celebrationOverlay.parentNode) {
+            celebrationOverlay.style.animation = 'fadeOut 0.3s ease-in-out';
+            setTimeout(() => {
+                if (celebrationOverlay.parentNode) {
+                    celebrationOverlay.remove();
+                }
+            }, 300);
+        }
+    }, 10000);
+    
+    // Update the status panel to reflect success
+    document.getElementById('status-title').innerText = 'Order Confirmed';
+    document.getElementById('status-subtitle').innerText = 'Your meal has been successfully ordered!';
+}
+
 async function submitChatResponse() {
     const responseInput = document.getElementById('chat-response-input');
     const submitBtn = document.getElementById('chat-submit-btn');
@@ -1041,10 +1084,15 @@ function renderEventInStream(eventData, timestamp) {
     const { type, calls, responses, text, isFinalResponse, workflow_status } = eventData;
     let icon, iconColor, title, subtitle, bgColor;
     
-    // Check for user approval requirement
-    if (type === 'TextResponse' && workflow_status === 'AWAITING_USER_APPROVAL' && text) {
-        console.log('🎯 Detected AWAITING_USER_APPROVAL event, showing chat modal:', eventData);
-        showChatModal(text, eventData);
+    // Handle different workflow statuses for TextResponse events
+    if (type === 'TextResponse' && workflow_status && text) {
+        if (workflow_status === 'AWAITING_USER_APPROVAL') {
+            console.log('🎯 Detected AWAITING_USER_APPROVAL event, showing chat modal:', eventData);
+            showChatModal(text, eventData);
+        } else if (workflow_status === 'ORDER_CONFIRMED') {
+            console.log('🎉 Detected ORDER_CONFIRMED event, showing celebratory message:', eventData);
+            showCelebratoryMessage(text);
+        }
     }
     
     switch (type) {

@@ -23,4 +23,4 @@ class Session(BaseModel):
 
 
 class ResumeRequest(BaseModel):
-    choice: int  # 1, 2, or 3
+    choice: int | str  # 1, 2, or 3
