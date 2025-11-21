@@ -514,6 +514,279 @@ function getCurrentUserId() {
     return AppState.getCurrentUserId();
 }
 
+// Global variable to store current session ID for user response
+let currentSessionId = null;
+
+// Chat Modal Functions
+function showChatModal(text, eventData) {
+    console.log('📞 showChatModal called with text:', text.substring(0, 200) + '...');
+    console.log('📞 showChatModal eventData:', eventData);
+    
+    const modal = document.getElementById('chat-modal');
+    const messageContent = document.getElementById('chat-message-content');
+    const responseInput = document.getElementById('chat-response-input');
+    
+    // Parse markdown and render
+    if (typeof marked !== 'undefined') {
+        try {
+            // Configure marked for better list support
+            marked.setOptions({
+                breaks: true,
+                gfm: true
+            });
+            
+            const parsedMarkdown = marked.parse(text);
+            console.log('🔄 Parsed markdown HTML:', parsedMarkdown);
+            messageContent.innerHTML = parsedMarkdown;
+            
+            // Debug: Check if lists are in the parsed content
+            if (parsedMarkdown.includes('<ol>') || parsedMarkdown.includes('<ul>')) {
+                console.log('✅ Lists detected in parsed markdown');
+            } else {
+                console.log('❌ No lists found in parsed markdown');
+                console.log('Original text:', text);
+            }
+        } catch (error) {
+            console.error('❌ Markdown parsing error:', error);
+            // Fallback to simple text with line breaks
+            messageContent.innerHTML = text.replace(/\n/g, '<br>');
+        }
+    } else {
+        console.log('⚠️ Marked library not available, using fallback');
+        // Fallback to simple text with line breaks
+        messageContent.innerHTML = text.replace(/\n/g, '<br>');
+    }
+    
+    // Clear previous input
+    responseInput.value = '';
+    
+    // Store session data for later use
+    window.currentApprovalEvent = eventData;
+    
+    // Show modal
+    modal.classList.remove('hidden');
+    console.log('✅ Chat modal should now be visible');
+    
+    // Additional fallback: if marked.js failed to parse lists, try manual processing
+    if (!messageContent.innerHTML.includes('<ol>') && !messageContent.innerHTML.includes('<li>') && text.includes('1.')) {
+        console.log('🔧 Applying manual list processing as fallback');
+        let processedText = messageContent.innerHTML;
+        
+        // Simple regex to convert numbered lists - handle both \n and <br> formats
+        processedText = processedText.replace(
+            /(\d+\.\s+\*\*([^*]+)\*\*\s+([^<\n]+))/g, 
+            '<div style="margin: 0.75rem 0; display: flex; align-items: flex-start;"><span style="font-weight: bold; margin-right: 0.5rem; color: rgb(59 130 246); min-width: 1.5rem;">$1</span></div>'
+        );
+        
+        // Better approach - convert the whole thing to proper HTML list
+        const lines = text.split('\n');
+        let htmlContent = '';
+        let inList = false;
+        
+        for (let line of lines) {
+            line = line.trim();
+            if (line.match(/^\d+\.\s+/)) {
+                if (!inList) {
+                    htmlContent += '<ol style="margin: 0.75rem 0; padding-left: 1.5rem; list-style-type: decimal;">';
+                    inList = true;
+                }
+                
+                const listContent = line.replace(/^\d+\.\s+/, '').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+                htmlContent += `<li style="margin: 0.25rem 0; line-height: 1.5; color: rgb(226 232 240);">${listContent}</li>`;
+            } else if (line === '') {
+                if (inList) {
+                    htmlContent += '</ol>';
+                    inList = false;
+                }
+                htmlContent += '<br>';
+            } else {
+                if (inList) {
+                    htmlContent += '</ol>';
+                    inList = false;
+                }
+                htmlContent += `<p style="margin: 0.75rem 0; line-height: 1.6; color: rgb(226 232 240);">${line}</p>`;
+            }
+        }
+        
+        if (inList) {
+            htmlContent += '</ol>';
+        }
+        
+        messageContent.innerHTML = htmlContent;
+        console.log('🔧 Manual list processing applied:', htmlContent.substring(0, 200) + '...');
+    }
+    
+    // Focus on input
+    setTimeout(() => responseInput.focus(), 100);
+    
+    // Remove existing Enter key listener to avoid duplicates
+    responseInput.removeEventListener('keydown', window.chatModalKeyHandler);
+    
+    // Add Enter key support for textarea
+    window.chatModalKeyHandler = function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            submitChatResponse();
+        }
+    };
+    responseInput.addEventListener('keydown', window.chatModalKeyHandler);
+}
+
+function closeChatModal() {
+    const modal = document.getElementById('chat-modal');
+    const responseInput = document.getElementById('chat-response-input');
+    
+    modal.classList.add('hidden');
+    window.currentApprovalEvent = null;
+    
+    // Clean up event listener
+    if (window.chatModalKeyHandler) {
+        responseInput.removeEventListener('keydown', window.chatModalKeyHandler);
+        window.chatModalKeyHandler = null;
+    }
+}
+
+async function submitChatResponse() {
+    const responseInput = document.getElementById('chat-response-input');
+    const submitBtn = document.getElementById('chat-submit-btn');
+    const userResponse = responseInput.value.trim();
+    
+    if (!userResponse) {
+        responseInput.focus();
+        return;
+    }
+    
+    if (!currentSessionId) {
+        console.error('No session ID available for response');
+        alert('Error: No active session found');
+        return;
+    }
+    
+    // Show loading state
+    const originalBtnContent = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Sending...';
+    submitBtn.disabled = true;
+    
+    try {
+        // Handle test scenario - if this is a test session, just close the modal
+        if (currentSessionId === 'test-session-123') {
+            console.log('Test response received:', userResponse);
+            closeChatModal();
+            
+            // Simulate a response event after a brief delay
+            setTimeout(() => {
+                const timestamp = new Date().toLocaleTimeString('en-US', { 
+                    hour12: false, 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    second: '2-digit' 
+                });
+                
+                const testResponseEvent = {
+                    "type": "TextResponse",
+                    "isFinalResponse": true,
+                    "text": `Thank you for choosing: "${userResponse}". Your order has been processed successfully!`,
+                    "workflow_status": "ORDER_COMPLETE",
+                    "session_id": "test-session-123"
+                };
+                
+                renderEventInStream(testResponseEvent, timestamp);
+            }, 1000);
+            
+            return;
+        }
+        
+        // Send user response to resume workflow
+        const response = await fetch(`/api/sessions/${currentSessionId}/resume`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'text/event-stream'
+            },
+            body: JSON.stringify({
+                choice: userResponse
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        // Close modal
+        closeChatModal();
+        
+        // Handle the resumed event stream
+        if (response.headers.get('content-type')?.includes('text/event-stream')) {
+            console.log('📡 Resuming event stream with user response...');
+            
+            // Handle the event stream similar to triggerPlan
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) {
+                        console.log('🏁 Resumed event stream completed');
+                        break;
+                    }
+                    
+                    // Decode the chunk and add to buffer
+                    buffer += decoder.decode(value, { stream: true });
+                    
+                    // Process complete messages from buffer
+                    let newlineIndex;
+                    while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+                        const line = buffer.slice(0, newlineIndex).trim();
+                        buffer = buffer.slice(newlineIndex + 1);
+                        
+                        if (line.length === 0) continue; // Skip empty lines
+                        
+                        // Handle Server-Sent Events format
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6); // Remove 'data: ' prefix
+                            
+                            if (data === '[DONE]') {
+                                console.log('🔚 Resumed stream completed with [DONE] marker');
+                                break;
+                            }
+                            
+                            try {
+                                const jsonData = JSON.parse(data);
+                                console.log('📦 Resumed event stream data:', jsonData);
+                                
+                                // Render event in UI
+                                const timestamp = new Date().toLocaleTimeString('en-US', { 
+                                    hour12: false, 
+                                    hour: '2-digit', 
+                                    minute: '2-digit', 
+                                    second: '2-digit' 
+                                });
+                                renderEventInStream(jsonData, timestamp);
+                                
+                            } catch (parseError) {
+                                console.log('📄 Raw resumed stream data:', data);
+                            }
+                        }
+                    }
+                }
+            } finally {
+                reader.releaseLock();
+            }
+        }
+        
+    } catch (error) {
+        console.error('Error submitting chat response:', error);
+        alert('Failed to send response. Please try again.');
+    } finally {
+        // Reset button
+        submitBtn.innerHTML = originalBtnContent;
+        submitBtn.disabled = false;
+    }
+}
+
 async function triggerPlan(mealType) {
     const btn = event.currentTarget;
     const originalContent = btn.innerHTML;
@@ -604,6 +877,12 @@ async function triggerPlan(mealType) {
                                 console.log('📦 Event stream data:', jsonData);
                                 window.temp_buffer.push(jsonData);
                                 
+                                // Store session ID if present in the event data
+                                if (jsonData.session_id) {
+                                    currentSessionId = jsonData.session_id;
+                                    console.log('💾 Stored session ID:', currentSessionId);
+                                }
+                                
                                 // Render event in UI
                                 const timestamp = new Date().toLocaleTimeString('en-US', { 
                                     hour12: false, 
@@ -634,6 +913,11 @@ async function triggerPlan(mealType) {
                         } else if (line.startsWith('id: ')) {
                             const eventId = line.slice(4); // Remove 'id: ' prefix
                             console.log('🆔 Event ID:', eventId);
+                            // Also try to extract session ID from event ID if needed
+                            if (!currentSessionId && eventId.includes('session')) {
+                                currentSessionId = eventId;
+                                console.log('💾 Extracted session ID from event ID:', currentSessionId);
+                            }
                         } else {
                             // Handle other line formats
                             console.log('📝 Stream line:', line);
@@ -692,8 +976,14 @@ function renderEventInStream(eventData, timestamp) {
     const eventElement = document.createElement('div');
     
     // Get event type and determine icon/styling
-    const { type, calls, responses, text, isFinalResponse } = eventData;
+    const { type, calls, responses, text, isFinalResponse, workflow_status } = eventData;
     let icon, iconColor, title, subtitle, bgColor;
+    
+    // Check for user approval requirement
+    if (type === 'TextResponse' && workflow_status === 'AWAITING_USER_APPROVAL' && text) {
+        console.log('🎯 Detected AWAITING_USER_APPROVAL event, showing chat modal:', eventData);
+        showChatModal(text, eventData);
+    }
     
     switch (type) {
         case 'ToolCall':
@@ -793,7 +1083,8 @@ function testEventStreamRendering() {
                         "agent_name": "MealPlanner"
                     }
                 }
-            ]
+            ],
+            "workflow_status": "INITIALIZE"
         },
         {
             "type": "ToolResponse",
@@ -804,7 +1095,8 @@ function testEventStreamRendering() {
                         "result": null
                     }
                 }
-            ]
+            ],
+            "workflow_status": "INITIALIZE"
         },
         {
             "type": "ToolCall",
@@ -815,7 +1107,8 @@ function testEventStreamRendering() {
                         "request": "high-protein lunch for Tony Stark"
                     }
                 }
-            ]
+            ],
+            "workflow_status": "MEAL_PLANNING_STARTED"
         },
         {
             "type": "ToolResponse",
@@ -827,14 +1120,20 @@ function testEventStreamRendering() {
                         "message": "Found 3 restaurant options"
                     }
                 }
-            ]
+            ],
+            "workflow_status": "MEAL_PLANNING_STARTED"
         },
         {
             "type": "TextResponse",
             "isFinalResponse": true,
-            "text": "Hello Tony! I've got some delicious high-protein lunch options for you that are all peanut-free!"
+            "text": "Hi Tony! I have some delicious lunch options for you today:\n\n1. **Margherita Pizza** from The Italian Table - $12.99, 850 calories\n2. **Cheeseburger** from Burger Barn - $9.50, 750 calories\n3. **Gyro Plate** from Mediterranean Bites - $11.00, 850 calories\n\nPlease let me know which option you'd like, or if you have any feedback on these choices!",
+            "workflow_status": "AWAITING_USER_APPROVAL",
+            "session_id": "test-session-123"
         }
     ];
+    
+    // Set test session ID for this demo
+    currentSessionId = "test-session-123";
     
     // Clear existing events
     clearEventStream();

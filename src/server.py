@@ -213,16 +213,5 @@ async def get_session_state_value(session_id: str, state_key: str) -> dict[str, 
         )
 
 
-# @app.get("/api/sessions/{session_id}")
-# async def get_session_status(session_id: str):
-#     """
-#     UI Polling Endpoint.
-#     """
-#     session = db_manager.get_session(session_id)
-#     if not session:
-#         raise HTTPException(status_code=404, detail="Session not found")
-#     return session
-
-
 # catch all route everything to frontend
 app.mount("/", StaticFiles(directory="./src/static", html=True), name="static")

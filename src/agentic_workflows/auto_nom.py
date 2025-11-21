@@ -215,9 +215,12 @@ class AutoNom():
             if item is None:
                 continue
             try:
+                # Add session ID to every response
+                if isinstance(item, dict):
+                    item["session_id"] = self.session_id
                 data = json.dumps(item)
             except Exception:
-                data = json.dumps({"data": str(item)})
+                data = json.dumps({"data": str(item), "session_id": self.session_id})
             # SSE format: each message prefixed with "data: " and separated by a blank line
             yield f"data: {data}\n\n"
         # final keep-alive/termination event (optional)

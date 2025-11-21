@@ -10,6 +10,9 @@
     
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Markdown Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <!-- Tailwind Configuration for Custom Colors -->
     <script>
@@ -69,6 +72,71 @@
         .rotate-180 {
             transform: rotate(180deg);
         }
+        
+        /* Prose styling for markdown content */
+        .prose-invert {
+            color: rgb(226 232 240);
+        }
+        .prose-invert h1, .prose-invert h2, .prose-invert h3, .prose-invert h4 {
+            color: rgb(248 250 252);
+            font-weight: 600;
+        }
+        .prose-invert p {
+            margin: 0.75rem 0;
+            line-height: 1.6;
+        }
+        .prose-invert strong {
+            color: rgb(248 250 252);
+            font-weight: 600;
+        }
+        .prose-invert ol, .prose-invert ul {
+            margin: 0.75rem 0;
+            padding-left: 1.5rem;
+        }
+        .prose-invert li {
+            margin: 0.25rem 0;
+            line-height: 1.5;
+        }
+        .prose-invert ol {
+            list-style-type: decimal;
+            list-style-position: outside;
+        }
+        .prose-invert ol li {
+            display: list-item;
+            margin-left: 0;
+            padding-left: 0.25rem;
+        }
+        .prose-invert ul {
+            list-style-type: disc;
+            list-style-position: outside;
+        }
+        .prose-invert ul li {
+            display: list-item;
+            margin-left: 0;
+            padding-left: 0.25rem;
+        }
+        .prose-invert code {
+            background-color: rgb(51 65 85);
+            color: rgb(226 232 240);
+            padding: 0.125rem 0.25rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+        }
+        .prose-invert pre {
+            background-color: rgb(30 41 59);
+            color: rgb(226 232 240);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        .prose-invert blockquote {
+            border-left: 4px solid rgb(59 130 246);
+            padding-left: 1rem;
+            margin: 1rem 0;
+            color: rgb(203 213 225);
+            font-style: italic;
+        }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-200 font-sans min-h-screen selection:bg-primary-500 selection:text-white">
@@ -89,7 +157,7 @@
             <div class="flex items-center gap-3">
                 <div class="relative group">
                     <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg blur opacity-30 group-hover:opacity-75 transition duration-200"></div>
-                    <select id="user-select" onchange="loadUser(this.value)" class="relative bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-48 p-2.5 outline-none cursor-pointer">
+                    <select id="user-select" onchange="loadUser(this.value)" title="Select User" class="relative bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-48 p-2.5 outline-none cursor-pointer">
                         <!-- Options populated dynamically -->
                     </select>
                 </div>
@@ -123,8 +191,8 @@
                     <i class="fa-regular fa-id-card text-primary-500 mr-3"></i> Personal Details
                 </h2>
                 <div>
-                    <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">First Name</label>
-                    <input type="text" id="input-name" value="Tony" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all placeholder-slate-600">
+                    <label for="input-name" class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">First Name</label>
+                    <input type="text" id="input-name" value="Tony" placeholder="Enter your first name" title="First Name" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all placeholder-slate-600">
                 </div>
             </section>
 
@@ -272,6 +340,62 @@
         </div>
 
     </main>
+
+    <!-- Chat Modal for User Approval -->
+    <div id="chat-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col shadow-2xl">
+            <!-- Header -->
+            <div class="p-6 border-b border-slate-700">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold text-white flex items-center gap-3">
+                        <div class="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                            <i class="fa-solid fa-comments text-blue-400"></i>
+                        </div>
+                        Agent Response - Approval Required
+                    </h3>
+                    <button onclick="closeChatModal()" title="Close Chat Modal" class="text-slate-400 hover:text-white transition-colors">
+                        <i class="fa-solid fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Message Content -->
+            <div class="flex-1 p-6 overflow-y-auto">
+                <div class="bg-slate-900 rounded-lg p-4 border border-slate-700">
+                    <div class="text-sm text-slate-400 mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-robot"></i>
+                        <span>Agent Message</span>
+                    </div>
+                    <div id="chat-message-content" class="prose prose-sm prose-invert max-w-none">
+                        <!-- Markdown content will be rendered here -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Input Area -->
+            <div class="p-6 border-t border-slate-700">
+                <div class="flex flex-col gap-3">
+                    <label class="text-sm font-medium text-slate-300">Your Response:</label>
+                    <div class="flex gap-3">
+                        <textarea 
+                            id="chat-response-input" 
+                            placeholder="Type your response here..." 
+                            rows="2" 
+                            class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all placeholder-slate-500 resize-none"
+                        ></textarea>
+                        <button 
+                            onclick="submitChatResponse()" 
+                            id="chat-submit-btn"
+                            class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 self-end"
+                        >
+                            <span>Send</span>
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Include External JavaScript -->
     <script src="script.js"></script>
