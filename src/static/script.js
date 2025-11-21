@@ -243,7 +243,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     renderDays();
     renderAllergies();
-    renderMockHistory();
+    // renderMockHistory();
     
     // Load users from API and populate dropdown
     await populateUserDropdown();
@@ -335,6 +335,48 @@ async function populateUserDropdown() {
             select.appendChild(option);
         });
     }
+}
+
+// --- ACTIVE SESSIONS API FUNCTIONS ---
+
+async function fetchActiveSessionsForUser(userId) {
+    try {
+        console.log('🌐 Fetching active sessions from API for user:', userId);
+        const response = await fetch(`/api/users/${userId}/active-sessions`);
+        console.log('📡 API response status:', response.status);
+        
+        if (!response.ok) {
+            if (response.status === 404) {
+                console.warn(`User ${userId} not found`);
+                return null;
+            }
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('📦 API response data:', data);
+        return data;
+    } catch (error) {
+        console.error('❌ Error fetching active sessions:', error);
+        return null;
+    }
+}
+
+async function checkAndDisplayActiveSessions(userId) {
+    console.log('🔍 Checking active sessions for user:', userId);
+    const activeSessions = await fetchActiveSessionsForUser(userId);
+    console.log('📊 Active sessions response:', activeSessions);
+    
+    if (!activeSessions || activeSessions.active_sessions_count === 0) {
+        console.log('❌ No active sessions found, hiding active sessions display');
+        // No active sessions, hide the active sessions display
+        hideActiveSessionsDisplay();
+        return;
+    }
+    
+    console.log('✅ Active sessions found, displaying:', activeSessions.active_sessions_count);
+    // Show active sessions in the status tab
+    displayActiveSessions(activeSessions);
 }
 
 // --- 3. API FUNCTIONS ---
@@ -472,8 +514,13 @@ async function loadUser(userId) {
     // Update meal slots
     if (meals && meals.length > 0) {
         meals.forEach(meal => {
-            // Add to Profile
-            addMealSlot(meal.type, meal.start, meal.end);
+            // Add to Profile - check if it's a custom meal type
+            const isCustomMealType = !['Breakfast', 'Lunch', 'Dinner'].includes(meal.type);
+            if (isCustomMealType) {
+                addMealSlot('Custom', meal.start, meal.end, meal.type);
+            } else {
+                addMealSlot(meal.type, meal.start, meal.end);
+            }
             
             // Add to Meals Tab
             renderSavedMealCard(meal);
@@ -483,6 +530,9 @@ async function loadUser(userId) {
     // Simulate "Fetching" effect
     document.body.classList.add('opacity-50');
     setTimeout(() => document.body.classList.remove('opacity-50'), 200);
+    
+    // Check for active sessions after loading user data
+    await checkAndDisplayActiveSessions(userId);
 }
 
 function renderSavedMealCard(meal) {
@@ -1276,6 +1326,268 @@ function testEventStreamRendering() {
     switchTab('status');
 }
 
+function displayActiveSessions(activeSessionsData) {
+    console.log('📋 Displaying active sessions:', activeSessionsData.active_sessions_count);
+    const statusCard = document.getElementById('status-card');
+    const activeSessionsContainer = document.getElementById('active-sessions-container');
+    
+    // Show the status card with active session info and event stream
+    showStatusCardWithActiveSessions(activeSessionsData);
+    
+    // Create active sessions container if it doesn't exist
+    if (!activeSessionsContainer) {
+        const container = document.createElement('div');
+        container.id = 'active-sessions-container';
+        container.className = 'mb-6 space-y-4';
+        
+        // Insert before the status card
+        statusCard.parentNode.insertBefore(container, statusCard);
+    }
+    
+    // Show the active sessions container
+    document.getElementById('active-sessions-container').style.display = 'block';
+    
+    // Clear existing content
+    document.getElementById('active-sessions-container').innerHTML = '';
+    
+    // Create header
+    const header = document.createElement('div');
+    header.className = 'bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex items-start gap-3';
+    header.innerHTML = `
+        <i class="fa-solid fa-circle-info text-blue-400 mt-1"></i>
+        <div>
+            <div class="text-sm text-blue-200 font-medium">Active Sessions Found</div>
+            <div class="text-xs text-blue-300/80 mt-1">You have ${activeSessionsData.active_sessions_count} ongoing meal planning session(s). Click to resume.</div>
+        </div>
+    `;
+    
+    document.getElementById('active-sessions-container').appendChild(header);
+    
+    // Create session cards
+    activeSessionsData.active_sessions.forEach((session, index) => {
+        const sessionCard = createActiveSessionCard(session, index);
+        document.getElementById('active-sessions-container').appendChild(sessionCard);
+    });
+}
+
+function createActiveSessionCard(session, index) {
+    const card = document.createElement('div');
+    card.className = 'bg-slate-800 border border-slate-700 hover:border-slate-600 rounded-xl p-5 transition-all hover:shadow-lg hover:shadow-black/20 cursor-pointer group';
+    
+    const state = session.state;
+    const workflowStatus = state.workflow_status || 'UNKNOWN';
+    const mealType = state.meal_type || 'Meal';
+    const userName = state.user_name || 'User';
+    
+    // Format time
+    const updateTime = new Date(session.update_time);
+    const timeString = updateTime.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+    });
+    
+    // Get status info
+    const statusInfo = getStatusDisplayInfo(workflowStatus);
+    
+    card.innerHTML = `
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-lg ${statusInfo.bgColor} flex items-center justify-center ${statusInfo.textColor} transition-colors">
+                    <i class="fa-solid ${statusInfo.icon} text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-slate-200 group-hover:text-white transition-colors">${mealType} Planning</h3>
+                    <div class="text-xs text-slate-500 mt-1">
+                        <span class="inline-flex items-center gap-1">
+                            <span class="w-2 h-2 ${statusInfo.dotColor} rounded-full"></span>
+                            ${statusInfo.label}
+                        </span>
+                        <span class="mx-2">•</span>
+                        <span>Updated at ${timeString}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <!-- <button onclick="resumeSession('${session.session_id}')" class="bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                    <span>Resume</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button> -->
+            </div>
+        </div>
+    `;
+    
+    return card;
+}
+
+function getStatusDisplayInfo(workflowStatus) {
+    switch (workflowStatus) {
+        case 'INITIALIZE':
+            return {
+                icon: 'fa-play-circle',
+                label: 'Initializing',
+                bgColor: 'bg-blue-500/20',
+                textColor: 'text-blue-400',
+                dotColor: 'bg-blue-400'
+            };
+        case 'MEAL_PLANNING_STARTED':
+            return {
+                icon: 'fa-circle-notch fa-spin',
+                label: 'Planning Meal',
+                bgColor: 'bg-yellow-500/20',
+                textColor: 'text-yellow-400',
+                dotColor: 'bg-yellow-400'
+            };
+        case 'AWAITING_USER_APPROVAL':
+            return {
+                icon: 'fa-clock',
+                label: 'Awaiting Your Response',
+                bgColor: 'bg-orange-500/20',
+                textColor: 'text-orange-400',
+                dotColor: 'bg-orange-400'
+            };
+        case 'PROCESSING_USER_FEEDBACK':
+            return {
+                icon: 'fa-cogs fa-spin',
+                label: 'Processing Response',
+                bgColor: 'bg-purple-500/20',
+                textColor: 'text-purple-400',
+                dotColor: 'bg-purple-400'
+            };
+        default:
+            return {
+                icon: 'fa-question-circle',
+                label: 'Unknown Status',
+                bgColor: 'bg-gray-500/20',
+                textColor: 'text-gray-400',
+                dotColor: 'bg-gray-400'
+            };
+    }
+}
+
+function hideActiveSessionsDisplay() {
+    console.log('🙈 Hiding active sessions display');
+    const activeSessionsContainer = document.getElementById('active-sessions-container');
+    if (activeSessionsContainer) {
+        activeSessionsContainer.style.display = 'none';
+        console.log('✅ Active sessions container hidden');
+    }
+    
+    // Show the default status card and update it to show "no active sessions"
+    showStatusCardWithNoActiveSessions();
+}
+
+function hideStatusCard() {
+    console.log('🙈 Hiding status card');
+    const statusCard = document.getElementById('status-card');
+    statusCard.style.display = 'none';
+}
+
+function showStatusCard() {
+    console.log('👁️ Showing status card');
+    const statusCard = document.getElementById('status-card');
+    statusCard.style.display = 'block';
+}
+
+function showStatusCardWithNoActiveSessions() {
+    console.log('📋 Showing status card with no active sessions message');
+    const statusCard = document.getElementById('status-card');
+    statusCard.style.display = 'block';
+    
+    // Update the content to show no active sessions
+    const statusTitle = document.getElementById('status-title');
+    const statusSubtitle = document.getElementById('status-subtitle');
+    const statusIndicator = document.getElementById('status-indicator');
+    const simpleProgress = document.getElementById('simple-progress');
+    
+    if (statusTitle) {
+        statusTitle.textContent = 'No Active Sessions';
+        console.log('✅ Updated status title');
+    }
+    if (statusSubtitle) {
+        statusSubtitle.textContent = 'No ongoing meal planning sessions found';
+        console.log('✅ Updated status subtitle');
+    }
+    if (statusIndicator) {
+        statusIndicator.innerHTML = '<i class="fa-solid fa-check-circle text-green-500 text-xl"></i>';
+        console.log('✅ Updated status indicator');
+    }
+    if (simpleProgress) {
+        simpleProgress.style.display = 'none';
+        console.log('✅ Hidden progress bar');
+    }
+    
+    // Update the status header indicator
+    const statusHeader = statusCard.querySelector('.text-xs.font-bold.text-green-400');
+    if (statusHeader) {
+        statusHeader.innerHTML = '<span class="text-slate-500">●</span> Status';
+        statusHeader.className = 'text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-2';
+        console.log('✅ Updated status header');
+    }
+}
+
+function showStatusCardWithActiveSessions(activeSessionsData) {
+    console.log('📋 Showing status card with active sessions and event stream');
+    const statusCard = document.getElementById('status-card');
+    statusCard.style.display = 'block';
+    
+    // Find the most recent active session to display in the status card
+    const mostRecentSession = activeSessionsData.active_sessions[0]; // Sessions are ordered by update_time DESC
+    const state = mostRecentSession.state;
+    const workflowStatus = state.workflow_status || 'UNKNOWN';
+    const mealType = state.meal_type || 'Meal';
+    
+    // Update the content to show active session info
+    const statusTitle = document.getElementById('status-title');
+    const statusSubtitle = document.getElementById('status-subtitle');
+    const statusIndicator = document.getElementById('status-indicator');
+    const simpleProgress = document.getElementById('simple-progress');
+    
+    if (statusTitle) {
+        statusTitle.textContent = `${mealType} Planning`;
+        console.log('✅ Updated status title for active session');
+    }
+    
+    if (statusSubtitle) {
+        const updateTime = new Date(mostRecentSession.update_time);
+        const timeString = updateTime.toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+        statusSubtitle.textContent = `Last updated ${timeString}`;
+        console.log('✅ Updated status subtitle for active session');
+    }
+    
+    if (statusIndicator) {
+        // Show spinning indicator for active sessions
+        statusIndicator.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-primary-500 text-xl"></i>';
+        console.log('✅ Updated status indicator for active session');
+    }
+    
+    if (simpleProgress) {
+        simpleProgress.style.display = 'block';
+        console.log('✅ Shown progress bar for active session');
+    }
+    
+    // Update the status header indicator
+    const statusHeader = statusCard.querySelector('.text-xs.font-bold');
+    if (statusHeader) {
+        statusHeader.innerHTML = '<span class="animate-pulse">●</span> Active Session';
+        statusHeader.className = 'text-xs font-bold text-green-400 uppercase tracking-widest mb-1 flex items-center gap-2';
+        console.log('✅ Updated status header for active session');
+    }
+}
+
+async function resumeSession(sessionId) {
+    console.log(`Attempting to resume session: ${sessionId}`);
+    // TODO: Implement session resume functionality
+    // This would typically involve calling the resume API endpoint
+    alert(`Resume functionality for session ${sessionId} will be implemented soon!`);
+}
+
 function renderDays() {
     const container = document.getElementById('days-container');
     days.forEach(day => {
@@ -1331,20 +1643,34 @@ function switchTab(tabName) {
     // Show current section
     const activeView = document.getElementById(`view-${tabName}`);
     if(activeView) activeView.classList.remove('hidden');
+    
+    // If switching to status tab, refresh active sessions
+    if (tabName === 'status') {
+        const currentUserId = getCurrentUserId();
+        if (currentUserId && currentUserId !== 'create_new') {
+            checkAndDisplayActiveSessions(currentUserId);
+        }
+    }
 }
 
 // Dynamic Meal Slots
-function addMealSlot(type = "Lunch", start = "12:00", end = "13:00") {
+function addMealSlot(type = "Lunch", start = "12:00", end = "13:00", customName = "") {
     const container = document.getElementById('meal-slots-container');
     const slot = document.createElement('div');
     slot.className = "flex items-center gap-2 bg-slate-900/50 p-2 rounded-lg border border-slate-700/50 animate-fade-in";
+    
+    const isCustom = !['Breakfast', 'Lunch', 'Dinner'].includes(type);
+    const customInputStyle = isCustom ? 'block' : 'none';
+    const actualCustomName = isCustom ? (customName || type) : '';
+    
     slot.innerHTML = `
-        <select class="bg-slate-800 text-xs text-white p-2 rounded border border-slate-700 focus:border-primary-500 outline-none">
+        <select class="bg-slate-800 text-xs text-white p-2 rounded border border-slate-700 focus:border-primary-500 outline-none" onchange="toggleCustomNameInput(this)">
             <option ${type === 'Breakfast' ? 'selected' : ''}>Breakfast</option>
             <option ${type === 'Lunch' ? 'selected' : ''}>Lunch</option>
             <option ${type === 'Dinner' ? 'selected' : ''}>Dinner</option>
-            <option ${!['Breakfast','Lunch','Dinner'].includes(type) ? 'selected' : ''}>${!['Breakfast','Lunch','Dinner'].includes(type) ? type : 'Custom'}</option>
+            <option ${isCustom ? 'selected' : ''}>Custom</option>
         </select>
+        <input type="text" placeholder="Custom meal name" value="${actualCustomName}" class="custom-meal-name bg-slate-800 text-white text-xs p-2 rounded border border-slate-700 outline-none focus:border-primary-500" style="display: ${customInputStyle}; min-width: 120px;">
         <div class="text-slate-500 text-xs">from</div>
         <input type="time" value="${start}" class="bg-slate-800 text-white text-xs p-2 rounded border border-slate-700 outline-none">
         <div class="text-slate-500 text-xs">to</div>
@@ -1354,6 +1680,20 @@ function addMealSlot(type = "Lunch", start = "12:00", end = "13:00") {
         </button>
     `;
     container.appendChild(slot);
+}
+
+// Toggle custom meal name input visibility
+function toggleCustomNameInput(selectElement) {
+    const slot = selectElement.parentElement;
+    const customNameInput = slot.querySelector('.custom-meal-name');
+    
+    if (selectElement.value === 'Custom') {
+        customNameInput.style.display = 'block';
+        customNameInput.focus();
+    } else {
+        customNameInput.style.display = 'none';
+        customNameInput.value = '';
+    }
 }
 
 // Preference Tags
@@ -1437,8 +1777,15 @@ async function saveProfile() {
                 meals: Array.from(document.querySelectorAll('#meal-slots-container > div')).map(slot => {
                     const select = slot.querySelector('select');
                     const timeInputs = slot.querySelectorAll('input[type="time"]');
+                    const customNameInput = slot.querySelector('.custom-meal-name');
+                    
+                    let mealType = select.value;
+                    if (mealType === 'Custom' && customNameInput && customNameInput.value.trim()) {
+                        mealType = customNameInput.value.trim();
+                    }
+                    
                     return {
-                        type: select.value,
+                        type: mealType,
                         start: timeInputs[0].value,
                         end: timeInputs[1].value
                     };

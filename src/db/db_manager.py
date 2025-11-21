@@ -315,6 +315,42 @@ def get_user_sessions(app_name: str, user_id: str) -> List[Session]:
         raise
 
 
+def get_active_user_sessions(app_name: str, user_id: str) -> List[Session]:
+    """
+    Retrieves all active sessions for a specific app_name and user_id.
+    An active session is one where state.workflow_status is not 'ORDER_CONFIRMED'.
+    Returns a list of Session objects.
+    """
+    try:
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM sessions WHERE app_name = ? AND user_id = ? ORDER BY update_time DESC", 
+                (app_name, user_id)
+            ).fetchall()
+            active_sessions: List[Session] = []
+            for row in rows:
+                session_data: Dict[str, Any] = dict(row)
+                # Parse the JSON state back to a dictionary
+                state: Dict[str, Any] = json.loads(session_data['state']) if session_data['state'] else {}
+                
+                # Check if session is active (workflow_status is not ORDER_CONFIRMED)
+                workflow_status = state.get('workflow_status', '')
+                if workflow_status != 'ORDER_CONFIRMED':
+                    session = Session(
+                        app_name=session_data['app_name'],
+                        user_id=session_data['user_id'],
+                        id=session_data['id'],
+                        state=state,
+                        create_time=datetime.fromisoformat(session_data['create_time']),
+                        update_time=datetime.fromisoformat(session_data['update_time'])
+                    )
+                    active_sessions.append(session)
+            return active_sessions
+    except Exception as e:
+        DatabaseLogger.user_retrieval_error(str(e))
+        raise
+
+
 def get_session_state_val(session_id: str, key: str) -> Optional[Any]:
     """
     Retrieves a specific state value from a session using session_id and key.
