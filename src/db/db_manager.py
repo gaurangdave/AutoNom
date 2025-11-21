@@ -13,6 +13,8 @@ DB_PATH = CURRENT_DIR / "data/autonom.db"
 def get_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    # Enable Write-Ahead Logging. faster, and allows concurrent read/write.
+    conn.execute("PRAGMA journal_mode=WAL;")
     return conn
 
 

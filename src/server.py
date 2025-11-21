@@ -169,6 +169,50 @@ async def resume_workflow(session_id: str, req: ResumeRequest):
             status_code=500, detail=f"Failed to resume workflow: {str(e)}")
 
 
+
+
+@app.get("/api/sessions/{session_id}/state/{state_key}")
+async def get_session_state_value(session_id: str, state_key: str) -> dict[str, Any]:
+    """
+    Get a specific state value from a session by session ID and state key.
+    """
+    try:
+        AutoNomLogger.api_called_panel(
+            "GET",
+            f"/api/sessions/{session_id}/state/{state_key}",
+            params={"session_id": session_id, "state_key": state_key}
+        )
+        
+        state_value = db_manager.get_session_state_val(session_id, state_key)
+        
+        if state_value is None:
+            # Check if session exists at all
+            session = db_manager.get_session_by_id(session_id)
+            if not session:
+                AutoNomLogger.log_error(f"Session not found: {session_id}", "GET_SESSION_STATE")
+                raise HTTPException(status_code=404, detail="Session not found")
+            else:
+                AutoNomLogger.log_error(f"State key '{state_key}' not found in session {session_id}", "GET_SESSION_STATE")
+                raise HTTPException(status_code=404, detail=f"State key '{state_key}' not found")
+        
+        AutoNomLogger.log_info(f"Retrieved state value for key '{state_key}' from session {session_id}", "GET_SESSION_STATE")
+        return {
+            "session_id": session_id,
+            "state_key": state_key,
+            "value": state_value,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        AutoNomLogger.log_error(f"Failed to get state value for session {session_id}: {str(e)}", "GET_SESSION_STATE")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Failed to retrieve state value: {str(e)}"
+        )
+
+
 # @app.get("/api/sessions/{session_id}")
 # async def get_session_status(session_id: str):
 #     """

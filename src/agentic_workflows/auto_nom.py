@@ -194,7 +194,11 @@ class AutoNom():
                 response = self.__print_conversation(
                     agent_name=agent_name, event=event)
 
-
+            if response:
+                workflow_status = db_manager.get_session_state_val(self.session_id, "workflow_status")
+                AutoNomLogger.log_debug(f"Workflow Status in DB {workflow_status}")
+                response["workflow_status"] = workflow_status
+                
             yield (response)
 
     async def get_sse_event_stream(self, user_input: str):
