@@ -367,6 +367,23 @@ async function saveUserToAPI(userData) {
 
 // --- 4. CORE LOGIC ---
 
+// Toggle Event Stream Visibility
+function toggleEventStream() {
+    const container = document.getElementById('event-stream-container');
+    const icon = document.getElementById('expand-icon');
+    const progress = document.getElementById('simple-progress');
+    
+    if (container.classList.contains('hidden')) {
+        container.classList.remove('hidden');
+        icon.classList.add('rotate-180');
+        progress.style.opacity = '0';
+    } else {
+        container.classList.add('hidden');
+        icon.classList.remove('rotate-180');
+        progress.style.opacity = '1';
+    }
+}
+
 function createNewUser() {
     // Generate a unique ID for new user
     const timestamp = Date.now();
@@ -507,11 +524,12 @@ async function triggerPlan(mealType) {
     btn.disabled = true;
     
     try {
-        // Make API call to trigger workflow
+        // Make API call to trigger workflow with streaming
         const response = await fetch(`/api/users/${currentUserId}/meals/${mealType}/trigger`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Accept': 'text/event-stream'
             }
         });
         
@@ -519,18 +537,132 @@ async function triggerPlan(mealType) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
-        const result = await response.json();
-        console.log('Workflow triggered successfully:', result);
-        
-        // Show success state briefly
-        btn.innerHTML = `<i class="fa-solid fa-check"></i> Started`;
-        
-        // Update Status UI
-        document.getElementById('status-title').innerText = `${mealType} Planning`;
-        document.getElementById('status-subtitle').innerText = `Triggered manually just now`;
-        
-        // Switch Tab
-        switchTab('status');
+        // Check if response is a stream
+        if (response.headers.get('content-type')?.includes('text/event-stream')) {
+            console.log('📡 Starting event stream for', mealType, 'planning...');
+            
+            // Show streaming state
+            btn.innerHTML = `<i class="fa-solid fa-satellite-dish fa-pulse"></i> Streaming`;
+            
+            // Update Status UI immediately
+            document.getElementById('status-title').innerText = `${mealType} Planning`;
+            document.getElementById('status-subtitle').innerText = `Streaming responses... Started just now`;
+            
+            // Clear and prepare event stream
+            clearEventStream();
+            
+            // Switch to Status tab to show progress
+            switchTab('status');
+            
+            // Expand event stream to show events
+            const container = document.getElementById('event-stream-container');
+            const icon = document.getElementById('expand-icon');
+            const progress = document.getElementById('simple-progress');
+            
+            if (container.classList.contains('hidden')) {
+                container.classList.remove('hidden');
+                icon.classList.add('rotate-180');
+                progress.style.opacity = '0';
+            }
+            
+            // Handle the event stream
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            window.temp_buffer = [];
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) {
+                        console.log('🏁 Event stream completed');
+                        break;
+                    }
+                    
+                    // Decode the chunk and add to buffer
+                    buffer += decoder.decode(value, { stream: true });
+                    
+                    // Process complete messages from buffer
+                    let newlineIndex;
+                    while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+                        const line = buffer.slice(0, newlineIndex).trim();
+                        buffer = buffer.slice(newlineIndex + 1);
+                        
+                        if (line.length === 0) continue; // Skip empty lines
+                        
+                        // Handle Server-Sent Events format
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6); // Remove 'data: ' prefix
+                            
+                            if (data === '[DONE]') {
+                                console.log('🔚 Stream completed with [DONE] marker');
+                                break;
+                            }
+                            
+                            try {
+                                const jsonData = JSON.parse(data);
+                                console.log('📦 Event stream data:', jsonData);
+                                window.temp_buffer.push(jsonData);
+                                
+                                // Render event in UI
+                                const timestamp = new Date().toLocaleTimeString('en-US', { 
+                                    hour12: false, 
+                                    hour: '2-digit', 
+                                    minute: '2-digit', 
+                                    second: '2-digit' 
+                                });
+                                renderEventInStream(jsonData, timestamp);
+                                
+                                // Log event details
+                                if (jsonData.type) {
+                                    console.log(`📋 Event type: ${jsonData.type}`);
+                                }
+                                if (jsonData.message) {
+                                    console.log(`💬 Message: ${jsonData.message}`);
+                                }
+                                if (jsonData.status) {
+                                    console.log(`📊 Status: ${jsonData.status}`);
+                                }
+                                
+                            } catch (parseError) {
+                                // Handle non-JSON data
+                                console.log('📄 Raw stream data:', data);
+                            }
+                        } else if (line.startsWith('event: ')) {
+                            const eventType = line.slice(7); // Remove 'event: ' prefix
+                            console.log('🎯 Event type:', eventType);
+                        } else if (line.startsWith('id: ')) {
+                            const eventId = line.slice(4); // Remove 'id: ' prefix
+                            console.log('🆔 Event ID:', eventId);
+                        } else {
+                            // Handle other line formats
+                            console.log('📝 Stream line:', line);
+                        }
+                    }
+                }
+            } finally {
+                reader.releaseLock();
+            }
+            
+            // Show completion state
+            btn.innerHTML = `<i class="fa-solid fa-check"></i> Completed`;
+            console.log('✅ Workflow stream completed successfully');
+            
+        } else {
+            // Fallback to regular JSON response
+            const result = await response.json();
+            console.log('Workflow triggered successfully:', result);
+            
+            // Show success state briefly
+            btn.innerHTML = `<i class="fa-solid fa-check"></i> Started`;
+            
+            // Update Status UI
+            document.getElementById('status-title').innerText = `${mealType} Planning`;
+            document.getElementById('status-subtitle').innerText = `Triggered manually just now`;
+            
+            // Switch Tab
+            switchTab('status');
+        }
         
         // Reset button after a brief delay
         setTimeout(() => {
@@ -549,12 +681,191 @@ async function triggerPlan(mealType) {
             btn.innerHTML = originalContent;
             btn.disabled = false;
         }, 3000);
-        
-        // Optional: You could show a toast notification here for better UX
     }
 }
 
 // --- 4. RENDER FUNCTIONS (UI COMPONENTS) ---
+
+// Event Stream Rendering Functions
+function renderEventInStream(eventData, timestamp) {
+    const container = document.getElementById('event-stream-container');
+    const eventElement = document.createElement('div');
+    
+    // Get event type and determine icon/styling
+    const { type, calls, responses, text, isFinalResponse } = eventData;
+    let icon, iconColor, title, subtitle, bgColor;
+    
+    switch (type) {
+        case 'ToolCall':
+            icon = 'fa-cog';
+            iconColor = 'text-blue-400';
+            bgColor = 'bg-blue-500/10 border-blue-500/20';
+            title = calls && calls.length > 0 ? calls.map(call => call.name).join(', ') : 'Tool Call';
+            subtitle = calls && calls.length > 0 ? `Called ${calls.length} tool${calls.length > 1 ? 's' : ''}` : 'Executing tool';
+            break;
+        
+        case 'ToolResponse':
+            icon = 'fa-check-circle';
+            iconColor = 'text-green-400';
+            bgColor = 'bg-green-500/10 border-green-500/20';
+            title = responses && responses.length > 0 ? responses.map(resp => resp.name).join(', ') : 'Tool Response';
+            subtitle = responses && responses.length > 0 ? 
+                responses.map(resp => {
+                    if (resp.response && resp.response.status) {
+                        return `Status: ${resp.response.status}`;
+                    }
+                    return 'Completed';
+                }).join(', ') : 'Response received';
+            break;
+            
+        case 'TextResponse':
+            icon = isFinalResponse ? 'fa-flag-checkered' : 'fa-comment';
+            iconColor = isFinalResponse ? 'text-purple-400' : 'text-yellow-400';
+            bgColor = isFinalResponse ? 'bg-purple-500/10 border-purple-500/20' : 'bg-yellow-500/10 border-yellow-500/20';
+            title = isFinalResponse ? 'Final Response' : 'Text Response';
+            subtitle = text ? (text.length > 100 ? text.substring(0, 100) + '...' : text) : 'Text response received';
+            break;
+            
+        default:
+            icon = 'fa-question-circle';
+            iconColor = 'text-gray-400';
+            bgColor = 'bg-gray-500/10 border-gray-500/20';
+            title = type || 'Unknown Event';
+            subtitle = 'Unknown event type';
+    }
+    
+    eventElement.className = `border rounded-lg p-3 ${bgColor} border transition-all hover:shadow-md animate-fade-in`;
+    
+    eventElement.innerHTML = `
+        <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-full bg-slate-700/50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <i class="fa-solid ${icon} ${iconColor} text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between">
+                    <h4 class="font-medium text-slate-200 text-sm">${title}</h4>
+                    <span class="text-xs text-slate-500 font-mono">${timestamp}</span>
+                </div>
+                <p class="text-xs text-slate-400 mt-1 leading-relaxed">${subtitle}</p>
+                ${text && type === 'TextResponse' ? `
+                    <div class="mt-2 p-2 bg-slate-800/50 rounded text-xs text-slate-300 border border-slate-700/50">
+                        ${text.replace(/\n/g, '<br>')}
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+    
+    // Insert at the beginning (newest events first)
+    const firstChild = container.querySelector('.text-xs.text-slate-500') || container.firstChild;
+    if (firstChild && firstChild.nextSibling) {
+        container.insertBefore(eventElement, firstChild.nextSibling);
+    } else {
+        container.appendChild(eventElement);
+    }
+    
+    // Auto-scroll to show newest events
+    container.scrollTop = 0;
+}
+
+function clearEventStream() {
+    const container = document.getElementById('event-stream-container');
+    // Keep the header, remove all event elements
+    const header = container.querySelector('.text-xs.text-slate-500');
+    container.innerHTML = '';
+    if (header) {
+        container.appendChild(header);
+    } else {
+        container.innerHTML = '<div class="text-xs text-slate-500 uppercase tracking-wider mb-2 font-bold">Agent Event Stream</div>';
+    }
+}
+
+// Test function to demonstrate event rendering (can be removed in production)
+function testEventStreamRendering() {
+    // Sample events based on the untitled file structure
+    const sampleEvents = [
+        {
+            "type": "ToolCall",
+            "calls": [
+                {
+                    "name": "transfer_to_agent",
+                    "arguments": {
+                        "agent_name": "MealPlanner"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "ToolResponse",
+            "responses": [
+                {
+                    "name": "transfer_to_agent",
+                    "response": {
+                        "result": null
+                    }
+                }
+            ]
+        },
+        {
+            "type": "ToolCall",
+            "calls": [
+                {
+                    "name": "restaurant_scout_agent",
+                    "arguments": {
+                        "request": "high-protein lunch for Tony Stark"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "ToolResponse",
+            "responses": [
+                {
+                    "name": "restaurant_scout_agent",
+                    "response": {
+                        "status": "success",
+                        "message": "Found 3 restaurant options"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "TextResponse",
+            "isFinalResponse": true,
+            "text": "Hello Tony! I've got some delicious high-protein lunch options for you that are all peanut-free!"
+        }
+    ];
+    
+    // Clear existing events
+    clearEventStream();
+    
+    // Show the event stream
+    const container = document.getElementById('event-stream-container');
+    const icon = document.getElementById('expand-icon');
+    const progress = document.getElementById('simple-progress');
+    
+    if (container.classList.contains('hidden')) {
+        container.classList.remove('hidden');
+        icon.classList.add('rotate-180');
+        progress.style.opacity = '0';
+    }
+    
+    // Render events with delay to simulate streaming
+    sampleEvents.forEach((event, index) => {
+        setTimeout(() => {
+            const timestamp = new Date().toLocaleTimeString('en-US', { 
+                hour12: false, 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit' 
+            });
+            renderEventInStream(event, timestamp);
+        }, index * 1000); // 1 second delay between events
+    });
+    
+    // Switch to status tab to show the events
+    switchTab('status');
+}
 
 function renderDays() {
     const container = document.getElementById('days-container');

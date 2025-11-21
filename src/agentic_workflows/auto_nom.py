@@ -14,6 +14,7 @@ from rich.markdown import Markdown
 from rich import box
 
 
+from src.db import db_manager
 from src.schema.users import UserProfile
 from src.utils.logger import AutoNomLogger
 console = Console()
@@ -54,7 +55,7 @@ class AutoNom():
         if calls:
             # Event is a tool call request
             response: dict[str, Any] = {
-                "type": "FunctionCall",
+                "type": "ToolCall",
                 "calls": []
             }
             for call in calls:
@@ -84,7 +85,7 @@ class AutoNom():
         responses = event.get_function_responses()
         if responses:
             response: dict[str, Any] = {
-                "type": "FunctionResponse",
+                "type": "ToolResponse",
                 "responses": []
             }
             for resp in responses:
@@ -101,6 +102,8 @@ class AutoNom():
                     "name": tool_name,
                     "response": result_dict
                 })
+            return response
+        return None
 
     def __print_conversation(self, agent_name: str, event: Event):
         response: dict[str, Any] = {
@@ -187,8 +190,10 @@ class AutoNom():
                 response = self.__print_function_responses(
                     agent_name=agent_name, event=event)
 
-            response = self.__print_conversation(
-                agent_name=agent_name, event=event)
+            if not response:
+                response = self.__print_conversation(
+                    agent_name=agent_name, event=event)
+
 
             yield (response)
 
