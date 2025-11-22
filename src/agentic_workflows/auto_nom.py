@@ -30,7 +30,7 @@ class AutoNom():
             "user_id": user.id,
             "user_dietary_preferences": ",\n".join(user.preferences) + "\n" + user.special_instructions,
             "user_allergies": user.allergies,
-            "workflow_status": "INITIALIZE",
+            "workflow_status": "IDLE",
             "meal_type": meal_type,
             "meal_options": [],
             "user_feedback": "",

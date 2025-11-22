@@ -4,61 +4,77 @@ const AppState = {
     currentUser: null,
     currentUserId: null,
     isLoading: false,
-    
+    activeSessionId: null, // Add active session ID to app state
+
     // Initialize state
     init() {
         this.users = [];
         this.currentUser = null;
         this.currentUserId = null;
         this.isLoading = false;
+        this.activeSessionId = null;
     },
-    
+
+    // Set active session ID
+    setActiveSessionId(sessionId) {
+        this.activeSessionId = sessionId;
+        currentActiveSessionId = sessionId;
+        console.log('🔄 Active session ID updated:', sessionId);
+    },
+
+    // Clear active session ID
+    clearActiveSessionId() {
+        this.activeSessionId = null;
+        currentActiveSessionId = null;
+        console.log('🧹 Active session ID cleared');
+    },
+
     // Set users list
     setUsers(users) {
         this.users = users;
     },
-    
+
     // Get user by ID
     getUserById(userId) {
         if (!userId) return null;
-        
+
         // Check API users first
         const apiUser = this.users.find(u => u.id === userId);
         if (apiUser) return apiUser;
-        
+
         // Fallback to mock users
         return mockUsers[userId] || null;
     },
-    
+
     // Set current user
     setCurrentUser(userId) {
         this.currentUserId = userId;
         this.currentUser = this.getUserById(userId);
-        
+
         // Store in localStorage for persistence
         if (userId && userId !== 'create_new') {
             localStorage.setItem('autonom_current_user', userId);
         }
     },
-    
+
     // Get current user ID (with fallback logic)
     getCurrentUserId() {
         const select = document.getElementById('user-select');
         if (!select) return this.currentUserId;
-        
+
         if (select.value === 'create_new') {
             return select.dataset.newUserId || `user_${Date.now()}`;
         }
         return select.value || this.currentUserId;
     },
-    
+
     // Update current user data
     updateCurrentUser(userData) {
         if (this.currentUser) {
             Object.assign(this.currentUser, userData);
         }
     },
-    
+
     // Add or update user in the users list
     upsertUser(userData) {
         const existingIndex = this.users.findIndex(u => u.id === userData.id);
@@ -67,37 +83,37 @@ const AppState = {
         } else {
             this.users.push(userData);
         }
-        
+
         // If this is the current user, update current user data
         if (this.currentUserId === userData.id) {
             this.currentUser = userData;
         }
     },
-    
+
     // Get user preferences safely
     getUserPreferences(userId = null) {
         const user = userId ? this.getUserById(userId) : this.currentUser;
         return user?.preferences || [];
     },
-    
+
     // Get user allergies safely
     getUserAllergies(userId = null) {
         const user = userId ? this.getUserById(userId) : this.currentUser;
         return user?.allergies || [];
     },
-    
+
     // Get user schedule safely
     getUserSchedule(userId = null) {
         const user = userId ? this.getUserById(userId) : this.currentUser;
         return user?.schedule || { days: [], meals: [], instructions: '' };
     },
-    
+
     // Get user instructions safely
     getUserInstructions(userId = null) {
         const user = userId ? this.getUserById(userId) : this.currentUser;
         return user?.schedule?.instructions || user?.instructions || '';
     },
-    
+
     // Get user meals safely
     getUserMeals(userId = null) {
         const user = userId ? this.getUserById(userId) : this.currentUser;
@@ -112,31 +128,31 @@ const UserData = {
     get current() {
         return AppState.currentUser;
     },
-    
+
     get id() {
         return AppState.getCurrentUserId();
     },
-    
+
     get name() {
         return AppState.currentUser?.name || '';
     },
-    
+
     get preferences() {
         return AppState.getUserPreferences();
     },
-    
+
     get allergies() {
         return AppState.getUserAllergies();
     },
-    
+
     get schedule() {
         return AppState.getUserSchedule();
     },
-    
+
     get meals() {
         return AppState.getUserMeals();
     },
-    
+
     get instructions() {
         return AppState.getUserInstructions();
     }
@@ -151,35 +167,35 @@ const UIHelpers = {
             select.value = userId;
         }
     },
-    
+
     // Clear all form fields
     clearForm() {
         document.getElementById('input-name').value = '';
         document.getElementById('input-instructions').value = '';
-        
+
         // Clear tags
         const tagContainer = document.getElementById('pref-tags');
         tagContainer.innerHTML = '';
-        
+
         // Clear allergies
         const allergyCards = document.querySelectorAll('.allergy-card');
         allergyCards.forEach(card => {
             card.classList.remove('ring-2', 'ring-primary-500', 'bg-slate-800', 'text-primary-400');
         });
-        
+
         // Clear days
         const dayButtons = document.querySelectorAll('.day-selector');
         dayButtons.forEach(btn => {
             btn.className = `w-full aspect-square rounded-full border border-slate-700 bg-slate-800 text-slate-400 font-bold text-sm hover:border-primary-500 hover:text-white transition-all flex items-center justify-center day-selector`;
         });
-        
+
         // Clear meal slots
         const slotsContainer = document.getElementById('meal-slots-container');
         const savedMealsContainer = document.getElementById('saved-meals-container');
         slotsContainer.innerHTML = '';
         savedMealsContainer.innerHTML = '';
     },
-    
+
     // Show/hide loading state
     setLoadingState(isLoading) {
         AppState.isLoading = isLoading;
@@ -194,7 +210,7 @@ const UIHelpers = {
 // --- 1. MOCK DATA ---
 const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const allergiesList = [
-    { name: 'Peanuts', icon: 'fa-bowl-rice' }, 
+    { name: 'Peanuts', icon: 'fa-bowl-rice' },
     { name: 'Dairy', icon: 'fa-cheese' },
     { name: 'Gluten', icon: 'fa-bread-slice' },
     { name: 'Shellfish', icon: 'fa-shrimp' },
@@ -240,18 +256,18 @@ const mockUsers = {
 document.addEventListener('DOMContentLoaded', async () => {
     // Initialize global state
     AppState.init();
-    
+
     renderDays();
     renderAllergies();
     // renderMockHistory();
-    
+
     // Load users from API and populate dropdown
     await populateUserDropdown();
-    
+
     // Load previously selected user or first available user
     const savedUserId = localStorage.getItem('autonom_current_user');
     const select = document.getElementById('user-select');
-    
+
     if (savedUserId && select.querySelector(`option[value="${savedUserId}"]`)) {
         select.value = savedUserId;
         await loadUser(savedUserId);
@@ -260,15 +276,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
+// Cleanup polling when page is unloaded
+window.addEventListener('beforeunload', () => {
+    stopAllPolling();
+});
+
 async function populateUserDropdown() {
     try {
         const users = await fetchUsers();
         AppState.setUsers(users);
         const select = document.getElementById('user-select');
-        
+
         // Clear existing options
         select.innerHTML = '';
-        
+
         // Add "Create New" option first
         const createNewOption = document.createElement('option');
         createNewOption.value = 'create_new';
@@ -276,7 +297,7 @@ async function populateUserDropdown() {
         createNewOption.style.fontStyle = 'italic';
         createNewOption.style.color = '#3b82f6';
         select.appendChild(createNewOption);
-        
+
         // Add separator if there are users
         if (users.length > 0) {
             const separator = document.createElement('option');
@@ -284,7 +305,7 @@ async function populateUserDropdown() {
             separator.textContent = '──────────────';
             select.appendChild(separator);
         }
-        
+
         // Add users from API
         users.forEach(user => {
             const option = document.createElement('option');
@@ -292,14 +313,14 @@ async function populateUserDropdown() {
             option.textContent = user.name;
             select.appendChild(option);
         });
-        
+
         // If no users from API, fall back to mock users
         if (users.length === 0) {
             const separator = document.createElement('option');
             separator.disabled = true;
             separator.textContent = '──────────────';
             select.appendChild(separator);
-            
+
             Object.keys(mockUsers).forEach(userId => {
                 const user = mockUsers[userId];
                 const option = document.createElement('option');
@@ -313,7 +334,7 @@ async function populateUserDropdown() {
         // Fall back to mock users on error
         const select = document.getElementById('user-select');
         select.innerHTML = '';
-        
+
         // Add "Create New" option first
         const createNewOption = document.createElement('option');
         createNewOption.value = 'create_new';
@@ -321,12 +342,12 @@ async function populateUserDropdown() {
         createNewOption.style.fontStyle = 'italic';
         createNewOption.style.color = '#3b82f6';
         select.appendChild(createNewOption);
-        
+
         const separator = document.createElement('option');
         separator.disabled = true;
         separator.textContent = '──────────────';
         select.appendChild(separator);
-        
+
         Object.keys(mockUsers).forEach(userId => {
             const user = mockUsers[userId];
             const option = document.createElement('option');
@@ -341,10 +362,10 @@ async function populateUserDropdown() {
 
 async function fetchActiveSessionsForUser(userId) {
     try {
-        console.log('🌐 Fetching active sessions from API for user:', userId);
+        console.log('🌐 Fetching active session IDs from API for user:', userId);
         const response = await fetch(`/api/users/${userId}/active-sessions`);
         console.log('📡 API response status:', response.status);
-        
+
         if (!response.ok) {
             if (response.status === 404) {
                 console.warn(`User ${userId} not found`);
@@ -352,9 +373,13 @@ async function fetchActiveSessionsForUser(userId) {
             }
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const data = await response.json();
-        console.log('📦 API response data:', data);
+        console.log('📦 Active sessions API response data:', data);
+
+        // Store the last check data for comparison
+        lastActiveSessionsCheck = data;
+
         return data;
     } catch (error) {
         console.error('❌ Error fetching active sessions:', error);
@@ -362,21 +387,215 @@ async function fetchActiveSessionsForUser(userId) {
     }
 }
 
-async function checkAndDisplayActiveSessions(userId) {
-    console.log('🔍 Checking active sessions for user:', userId);
-    const activeSessions = await fetchActiveSessionsForUser(userId);
-    console.log('📊 Active sessions response:', activeSessions);
-    
-    if (!activeSessions || activeSessions.active_sessions_count === 0) {
+async function fetchSessionState(userId, sessionId) {
+    try {
+        console.log('🌐 Fetching session state from API for:', { userId, sessionId });
+        const response = await fetch(`/api/users/${userId}/active-sessions/${sessionId}/state`);
+        console.log('📡 Session state API response status:', response.status);
+
+        if (!response.ok) {
+            if (response.status === 404) {
+                console.warn(`Session ${sessionId} not found or no longer active`);
+                return null;
+            }
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('📦 Session state API response data:', data);
+
+        return data;
+    } catch (error) {
+        console.error('❌ Error fetching session state:', error);
+        return null;
+    }
+}
+
+async function checkAndDisplayActiveSessions(userId, isPollingCheck = false) {
+    console.log('🔍 Checking active sessions for user:', userId, isPollingCheck ? '(polling)' : '(manual)');
+    const activeSessionsResponse = await fetchActiveSessionsForUser(userId);
+    console.log('📊 Active sessions response:', activeSessionsResponse);
+
+    if (!activeSessionsResponse || activeSessionsResponse.active_sessions_count === 0) {
         console.log('❌ No active sessions found, hiding active sessions display');
-        // No active sessions, hide the active sessions display
+        // No active sessions, clear state and hide display
+        AppState.clearActiveSessionId();
+        stopSessionStatePolling();
         hideActiveSessionsDisplay();
         return;
     }
-    
-    console.log('✅ Active sessions found, displaying:', activeSessions.active_sessions_count);
-    // Show active sessions in the status tab
-    displayActiveSessions(activeSessions);
+
+    console.log('✅ Active sessions found:', activeSessionsResponse.active_sessions_count);
+    console.log('📋 Session IDs:', activeSessionsResponse.session_ids);
+
+    // Get the first active session ID
+    const sessionId = activeSessionsResponse.session_ids[0];
+    console.log('🎯 Using session ID:', sessionId);
+
+    // If this is a new active session, update app state and start session state polling
+    if (sessionId !== AppState.activeSessionId) {
+        console.log('🆕 New active session detected, switching to session state polling');
+        AppState.setActiveSessionId(sessionId);
+        currentSessionId = sessionId; // Also set for response handling
+
+        // Stop active sessions polling since we found an active session
+        stopActiveSessionsPolling();
+        console.log('⏹️ Stopped active sessions polling, found active session');
+
+        // Start polling the session state
+        console.log('🚀 About to start session state polling...');
+        startSessionStatePolling(userId, sessionId);
+    } else {
+        console.log('🔄 Same active session, session state polling should already be running');
+        // Make sure we're not still doing active sessions polling for the same session
+        if (isPollingActive) {
+            stopActiveSessionsPolling();
+            console.log('⏹️ Stopped duplicate active sessions polling');
+        }
+    }
+
+    // Show active sessions in the status tab (simplified display)
+    displayActiveSessionFound(activeSessionsResponse);
+}
+
+function startSessionStatePolling(userId, sessionId) {
+    console.log('▶️ Starting session state polling for:', { userId, sessionId });
+
+    // Stop any existing session state polling
+    stopSessionStatePolling();
+
+    // Start new session state polling interval
+    isSessionStatePollingActive = true;
+    sessionStatePollingInterval = setInterval(async () => {
+        if (isSessionStatePollingActive && userId && sessionId) {
+            console.log('🔄 Session state polling tick for:', { userId, sessionId });
+            await checkSessionState(userId, sessionId);
+        } else {
+            console.log('⚠️ Session state polling tick skipped - inactive or missing params');
+        }
+    }, 5000); // Poll every 5 seconds
+
+    console.log('✅ Session state polling started (5s interval)');
+}
+
+function stopSessionStatePolling() {
+    console.log('⏹️ Stopping session state polling');
+
+    if (sessionStatePollingInterval) {
+        clearInterval(sessionStatePollingInterval);
+        sessionStatePollingInterval = null;
+    }
+
+    isSessionStatePollingActive = false;
+    console.log('✅ Session state polling stopped');
+}
+
+async function checkSessionState(userId, sessionId) {
+    console.log('🔍 Checking session state for:', { userId, sessionId });
+    const sessionStateResponse = await fetchSessionState(userId, sessionId);
+
+    if (!sessionStateResponse) {
+        console.log('❌ Session state not found, session may have ended');
+        // Session ended, clean up
+        AppState.clearActiveSessionId();
+        stopSessionStatePolling();
+        // Restart active sessions polling
+        startActiveSessionsPolling(userId);
+        return;
+    }
+
+    const workflowStatus = sessionStateResponse.state.workflow_status;
+    console.log('📊 Current workflow status:', workflowStatus);
+
+    switch (workflowStatus) {
+        case 'AWAITING_USER_APPROVAL':
+            const verificationMessage = sessionStateResponse.state.meal_choice_verification_message;
+            if (verificationMessage) {
+                console.log('🔔 Session awaiting user approval, showing chat modal');
+
+                // Stop session state polling temporarily to avoid modal spam
+                stopSessionStatePolling();
+
+                // Show the chat modal with the verification message
+                showChatModal(verificationMessage, {
+                    type: 'TextResponse',
+                    isFinalResponse: true,
+                    text: verificationMessage,
+                    workflow_status: 'AWAITING_USER_APPROVAL',
+                    session_id: sessionId
+                });
+            }
+            break;
+
+        case 'ORDER_CONFIRMED':
+            console.log('🎉 Order confirmed from session state! Showing celebration and cleaning up');
+
+            // Show celebratory message
+            const confirmationMessage = sessionStateResponse.state.order_confirmation_message || 'Your order has been confirmed and is being prepared!';
+            console.log('🎊 Confirmation message:', confirmationMessage);
+            showCelebratoryMessage(confirmationMessage);
+
+            // Clean up - stop polling and clear active session
+            stopSessionStatePolling();
+            AppState.clearActiveSessionId();
+
+            // Restart active sessions polling to check for new sessions
+            setTimeout(() => {
+                console.log('🔄 Restarting active sessions polling after order confirmation');
+                startActiveSessionsPolling(userId);
+            }, 3000); // Wait a bit longer before restarting polling
+            break;
+
+        default:
+            console.log('ℹ️ Session in progress with status:', workflowStatus);
+            // Continue polling for other statuses
+            break;
+    }
+}
+
+// --- ACTIVE SESSIONS POLLING FUNCTIONS ---
+
+function startActiveSessionsPolling(userId) {
+    console.log('▶️ Starting active sessions polling for user:', userId);
+
+    // Stop any existing polling
+    stopActiveSessionsPolling();
+
+    // Start new polling interval
+    isPollingActive = true;
+    activeSessionsPollingInterval = setInterval(async () => {
+        if (isPollingActive && userId) {
+            await checkAndDisplayActiveSessions(userId, true);
+        }
+    }, 5000); // Poll every 5 seconds
+
+    console.log('✅ Active sessions polling started (5s interval)');
+}
+
+function stopActiveSessionsPolling() {
+    console.log('⏹️ Stopping active sessions polling');
+
+    if (activeSessionsPollingInterval) {
+        clearInterval(activeSessionsPollingInterval);
+        activeSessionsPollingInterval = null;
+    }
+
+    isPollingActive = false;
+    console.log('✅ Active sessions polling stopped');
+}
+
+function stopAllPolling() {
+    console.log('🛑 Stopping all polling');
+    stopActiveSessionsPolling();
+    stopSessionStatePolling();
+}
+
+function restartActiveSessionsPolling() {
+    const currentUserId = getCurrentUserId();
+    if (currentUserId && currentUserId !== 'create_new') {
+        console.log('🔄 Restarting active sessions polling for user:', currentUserId);
+        startActiveSessionsPolling(currentUserId);
+    }
 }
 
 // --- 3. API FUNCTIONS ---
@@ -414,7 +633,7 @@ function toggleEventStream() {
     const container = document.getElementById('event-stream-container');
     const icon = document.getElementById('expand-icon');
     const progress = document.getElementById('simple-progress');
-    
+
     if (container.classList.contains('hidden')) {
         container.classList.remove('hidden');
         icon.classList.add('rotate-180');
@@ -430,27 +649,31 @@ function createNewUser() {
     // Generate a unique ID for new user
     const timestamp = Date.now();
     const newUserId = `user_${timestamp}`;
-    
+
     // Clear all form fields using utility
     UIHelpers.clearForm();
-    
+
     // Update the user select dropdown to show the new user ID
     const select = document.getElementById('user-select');
     select.value = 'create_new';
-    
+
     // Store the new user ID for saving
     select.dataset.newUserId = newUserId;
-    
+
     // Reset current user state
     AppState.setCurrentUser(null);
     AppState.currentUserId = newUserId;
-    
+
+    // Stop all polling when creating new user
+    stopAllPolling();
+    AppState.clearActiveSessionId();
+
     // Switch to profile tab
     switchTab('profile');
-    
+
     // Focus on name input
     document.getElementById('input-name').focus();
-    
+
     console.log('Ready to create new user with ID:', newUserId);
 }
 
@@ -460,11 +683,11 @@ async function loadUser(userId) {
         createNewUser();
         return;
     }
-    
+
     // Set current user in state
     AppState.setCurrentUser(userId);
     const user = AppState.currentUser;
-    if(!user) return;
+    if (!user) return;
 
     // 1. Update Profile Inputs
     document.getElementById('input-name').value = user.name || '';
@@ -497,7 +720,7 @@ async function loadUser(userId) {
     const dayButtons = document.querySelectorAll('.day-selector');
     const slotsContainer = document.getElementById('meal-slots-container');
     const savedMealsContainer = document.getElementById('saved-meals-container');
-    
+
     slotsContainer.innerHTML = '';
     savedMealsContainer.innerHTML = '';
 
@@ -521,7 +744,7 @@ async function loadUser(userId) {
             } else {
                 addMealSlot(meal.type, meal.start, meal.end);
             }
-            
+
             // Add to Meals Tab
             renderSavedMealCard(meal);
         });
@@ -530,9 +753,12 @@ async function loadUser(userId) {
     // Simulate "Fetching" effect
     document.body.classList.add('opacity-50');
     setTimeout(() => document.body.classList.remove('opacity-50'), 200);
-    
+
     // Check for active sessions after loading user data
     await checkAndDisplayActiveSessions(userId);
+
+    // Start polling for active sessions
+    startActiveSessionsPolling(userId);
 }
 
 function renderSavedMealCard(meal) {
@@ -567,15 +793,23 @@ function getCurrentUserId() {
 // Global variable to store current session ID for user response
 let currentSessionId = null;
 
+// Global polling variables
+let activeSessionsPollingInterval = null;
+let sessionStatePollingInterval = null;
+let lastActiveSessionsCheck = null;
+let isPollingActive = false;
+let isSessionStatePollingActive = false;
+let currentActiveSessionId = null; // Store the active session ID
+
 // Chat Modal Functions
 function showChatModal(text, eventData) {
     console.log('📞 showChatModal called with text:', text.substring(0, 200) + '...');
     console.log('📞 showChatModal eventData:', eventData);
-    
+
     const modal = document.getElementById('chat-modal');
     const messageContent = document.getElementById('chat-message-content');
     const responseInput = document.getElementById('chat-response-input');
-    
+
     // Parse markdown and render
     if (typeof marked !== 'undefined') {
         try {
@@ -584,11 +818,11 @@ function showChatModal(text, eventData) {
                 breaks: true,
                 gfm: true
             });
-            
+
             const parsedMarkdown = marked.parse(text);
             console.log('🔄 Parsed markdown HTML:', parsedMarkdown);
             messageContent.innerHTML = parsedMarkdown;
-            
+
             // Debug: Check if lists are in the parsed content
             if (parsedMarkdown.includes('<ol>') || parsedMarkdown.includes('<ul>')) {
                 console.log('✅ Lists detected in parsed markdown');
@@ -606,33 +840,33 @@ function showChatModal(text, eventData) {
         // Fallback to simple text with line breaks
         messageContent.innerHTML = text.replace(/\n/g, '<br>');
     }
-    
+
     // Clear previous input
     responseInput.value = '';
-    
+
     // Store session data for later use
     window.currentApprovalEvent = eventData;
-    
+
     // Show modal
     modal.classList.remove('hidden');
     console.log('✅ Chat modal should now be visible');
-    
+
     // Additional fallback: if marked.js failed to parse lists, try manual processing
     if (!messageContent.innerHTML.includes('<ol>') && !messageContent.innerHTML.includes('<li>') && text.includes('1.')) {
         console.log('🔧 Applying manual list processing as fallback');
         let processedText = messageContent.innerHTML;
-        
+
         // Simple regex to convert numbered lists - handle both \n and <br> formats
         processedText = processedText.replace(
-            /(\d+\.\s+\*\*([^*]+)\*\*\s+([^<\n]+))/g, 
+            /(\d+\.\s+\*\*([^*]+)\*\*\s+([^<\n]+))/g,
             '<div style="margin: 0.75rem 0; display: flex; align-items: flex-start;"><span style="font-weight: bold; margin-right: 0.5rem; color: rgb(59 130 246); min-width: 1.5rem;">$1</span></div>'
         );
-        
+
         // Better approach - convert the whole thing to proper HTML list
         const lines = text.split('\n');
         let htmlContent = '';
         let inList = false;
-        
+
         for (let line of lines) {
             line = line.trim();
             if (line.match(/^\d+\.\s+/)) {
@@ -640,7 +874,7 @@ function showChatModal(text, eventData) {
                     htmlContent += '<ol style="margin: 0.75rem 0; padding-left: 1.5rem; list-style-type: decimal;">';
                     inList = true;
                 }
-                
+
                 const listContent = line.replace(/^\d+\.\s+/, '').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
                 htmlContent += `<li style="margin: 0.25rem 0; line-height: 1.5; color: rgb(226 232 240);">${listContent}</li>`;
             } else if (line === '') {
@@ -657,23 +891,23 @@ function showChatModal(text, eventData) {
                 htmlContent += `<p style="margin: 0.75rem 0; line-height: 1.6; color: rgb(226 232 240);">${line}</p>`;
             }
         }
-        
+
         if (inList) {
             htmlContent += '</ol>';
         }
-        
+
         messageContent.innerHTML = htmlContent;
         console.log('🔧 Manual list processing applied:', htmlContent.substring(0, 200) + '...');
     }
-    
+
     // Focus on input
     setTimeout(() => responseInput.focus(), 100);
-    
+
     // Remove existing Enter key listener to avoid duplicates
     responseInput.removeEventListener('keydown', window.chatModalKeyHandler);
-    
+
     // Add Enter key support for textarea
-    window.chatModalKeyHandler = function(e) {
+    window.chatModalKeyHandler = function (e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             submitChatResponse();
@@ -685,27 +919,36 @@ function showChatModal(text, eventData) {
 function closeChatModal() {
     const modal = document.getElementById('chat-modal');
     const responseInput = document.getElementById('chat-response-input');
-    
+
     modal.classList.add('hidden');
     window.currentApprovalEvent = null;
-    
+
     // Clean up event listener
     if (window.chatModalKeyHandler) {
         responseInput.removeEventListener('keydown', window.chatModalKeyHandler);
         window.chatModalKeyHandler = null;
     }
+
+    // Restart session state polling when modal is closed (if we have an active session)
+    setTimeout(() => {
+        const currentUserId = getCurrentUserId();
+        if (currentActiveSessionId && currentUserId && currentUserId !== 'create_new') {
+            console.log('🔄 Restarting session state polling after modal close');
+            startSessionStatePolling(currentUserId, currentActiveSessionId);
+        }
+    }, 1000); // Small delay to avoid immediate re-trigger
 }
 
 function showCelebratoryMessage(text) {
     console.log('🎉 Showing celebratory message:', text);
-    
+
     // Create a temporary celebration overlay
     const celebrationOverlay = document.createElement('div');
     celebrationOverlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
     celebrationOverlay.style.animation = 'fadeIn 0.3s ease-in-out';
-    
+
     celebrationOverlay.innerHTML = `
-        <div class="bg-gradient-to-br from-green-600 to-green-700 border border-green-500 rounded-2xl max-w-lg mx-4 p-8 text-center shadow-2xl transform animate-bounce">
+        <div class="bg-gradient-to-br from-green-600 to-green-700 border border-green-500 rounded-2xl max-w-lg mx-4 p-8 text-center shadow-2xl transform celebration-bounce">
             <div class="mb-4">
                 <i class="fa-solid fa-check-circle text-white text-6xl"></i>
             </div>
@@ -718,10 +961,38 @@ function showCelebratoryMessage(text) {
             </button>
         </div>
     `;
-    
+
+    // Add custom bounce animation style
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes celebrationBounce {
+            0%, 20%, 53%, 80%, 100% {
+                animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+                transform: translate3d(0, 0, 0) scale(1);
+            }
+            40%, 43% {
+                animation-timing-function: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+                transform: translate3d(0, -30px, 0) scale(1.1);
+            }
+            70% {
+                animation-timing-function: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+                transform: translate3d(0, -15px, 0) scale(1.05);
+            }
+            90% {
+                transform: translate3d(0, -4px, 0) scale(1.02);
+            }
+        }
+        .celebration-bounce {
+            animation: celebrationBounce 1.2s ease-in-out;
+        }
+    `;
+
+    // Add style to head temporarily
+    document.head.appendChild(style);
+
     // Add to body
     document.body.appendChild(celebrationOverlay);
-    
+
     // Auto-remove after 10 seconds
     setTimeout(() => {
         if (celebrationOverlay.parentNode) {
@@ -729,11 +1000,15 @@ function showCelebratoryMessage(text) {
             setTimeout(() => {
                 if (celebrationOverlay.parentNode) {
                     celebrationOverlay.remove();
+                    // Clean up the style element
+                    if (style.parentNode) {
+                        style.remove();
+                    }
                 }
             }, 300);
         }
     }, 10000);
-    
+
     // Update the status panel to reflect success
     document.getElementById('status-title').innerText = 'Order Confirmed';
     document.getElementById('status-subtitle').innerText = 'Your meal has been successfully ordered!';
@@ -743,38 +1018,38 @@ async function submitChatResponse() {
     const responseInput = document.getElementById('chat-response-input');
     const submitBtn = document.getElementById('chat-submit-btn');
     const userResponse = responseInput.value.trim();
-    
+
     if (!userResponse) {
         responseInput.focus();
         return;
     }
-    
+
     if (!currentSessionId) {
         console.error('No session ID available for response');
         alert('Error: No active session found');
         return;
     }
-    
+
     // Show loading state
     const originalBtnContent = submitBtn.innerHTML;
     submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Sending...';
     submitBtn.disabled = true;
-    
+
     try {
         // Handle test scenario - if this is a test session, just close the modal
         if (currentSessionId === 'test-session-123') {
             console.log('Test response received:', userResponse);
             closeChatModal();
-            
+
             // Simulate a response event after a brief delay
             setTimeout(() => {
-                const timestamp = new Date().toLocaleTimeString('en-US', { 
-                    hour12: false, 
-                    hour: '2-digit', 
-                    minute: '2-digit', 
-                    second: '2-digit' 
+                const timestamp = new Date().toLocaleTimeString('en-US', {
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
                 });
-                
+
                 const testResponseEvent = {
                     "type": "TextResponse",
                     "isFinalResponse": true,
@@ -782,13 +1057,13 @@ async function submitChatResponse() {
                     "workflow_status": "ORDER_COMPLETE",
                     "session_id": "test-session-123"
                 };
-                
+
                 renderEventInStream(testResponseEvent, timestamp);
             }, 1000);
-            
+
             return;
         }
-        
+
         // Send user response to resume workflow
         const response = await fetch(`/api/sessions/${currentSessionId}/resume`, {
             method: 'POST',
@@ -800,86 +1075,86 @@ async function submitChatResponse() {
                 choice: userResponse
             })
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         // Close modal first
         closeChatModal();
-        
+
         // Handle the resumed event stream
         if (response.headers.get('content-type')?.includes('text/event-stream')) {
             console.log('📡 Resuming event stream with user response...');
-            
+
             // Show streaming state in submit button
             submitBtn.innerHTML = `<i class="fa-solid fa-satellite-dish fa-pulse"></i> Streaming`;
-            
+
             // Update Status UI to show resumption
             document.getElementById('status-title').innerText = 'Session Resumed';
             document.getElementById('status-subtitle').innerText = `Processing your response: "${userResponse.substring(0, 50)}${userResponse.length > 50 ? '...' : ''}"`;
-            
+
             // Switch to Status tab to show progress
             switchTab('status');
-            
+
             // Expand event stream to show events if it's collapsed
             const container = document.getElementById('event-stream-container');
             const icon = document.getElementById('expand-icon');
             const progress = document.getElementById('simple-progress');
-            
+
             if (container.classList.contains('hidden')) {
                 container.classList.remove('hidden');
                 icon.classList.add('rotate-180');
                 progress.style.opacity = '0';
             }
-            
+
             // Handle the event stream
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
-            
+
             try {
                 while (true) {
                     const { done, value } = await reader.read();
-                    
+
                     if (done) {
                         console.log('🏁 Resumed event stream completed');
                         break;
                     }
-                    
+
                     // Decode the chunk and add to buffer
                     buffer += decoder.decode(value, { stream: true });
-                    
+
                     // Process complete messages from buffer
                     let newlineIndex;
                     while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
                         const line = buffer.slice(0, newlineIndex).trim();
                         buffer = buffer.slice(newlineIndex + 1);
-                        
+
                         if (line.length === 0) continue; // Skip empty lines
-                        
+
                         // Handle Server-Sent Events format
                         if (line.startsWith('data: ')) {
                             const data = line.slice(6); // Remove 'data: ' prefix
-                            
+
                             if (data === '[DONE]') {
                                 console.log('🔚 Resumed stream completed with [DONE] marker');
                                 break;
                             }
-                            
+
                             try {
                                 const jsonData = JSON.parse(data);
                                 console.log('📦 Resumed event stream data:', jsonData);
-                                
+
                                 // Render event in UI
-                                const timestamp = new Date().toLocaleTimeString('en-US', { 
-                                    hour12: false, 
-                                    hour: '2-digit', 
-                                    minute: '2-digit', 
-                                    second: '2-digit' 
+                                const timestamp = new Date().toLocaleTimeString('en-US', {
+                                    hour12: false,
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    second: '2-digit'
                                 });
                                 renderEventInStream(jsonData, timestamp);
-                                
+
                                 // Log event details
                                 if (jsonData.type) {
                                     console.log(`📋 Resumed event type: ${jsonData.type}`);
@@ -890,7 +1165,7 @@ async function submitChatResponse() {
                                 if (jsonData.status) {
                                     console.log(`📊 Resumed status: ${jsonData.status}`);
                                 }
-                                
+
                             } catch (parseError) {
                                 console.log('📄 Raw resumed stream data:', data);
                             }
@@ -909,27 +1184,27 @@ async function submitChatResponse() {
             } finally {
                 reader.releaseLock();
             }
-            
+
             // Show completion state
             submitBtn.innerHTML = `<i class="fa-solid fa-check"></i> Completed`;
             console.log('✅ Resumed workflow stream completed successfully');
-            
+
         } else {
             // Fallback to regular JSON response
             const result = await response.json();
             console.log('Workflow resumed successfully:', result);
-            
+
             // Show success state briefly
             submitBtn.innerHTML = `<i class="fa-solid fa-check"></i> Sent`;
-            
+
             // Update Status UI
             document.getElementById('status-title').innerText = 'Session Resumed';
             document.getElementById('status-subtitle').innerText = 'Response processed successfully';
-            
+
             // Switch to Status tab
             switchTab('status');
         }
-        
+
     } catch (error) {
         console.error('Error submitting chat response:', error);
         alert('Failed to send response. Please try again.');
@@ -946,11 +1221,11 @@ async function triggerPlan(mealType) {
     const btn = event.currentTarget;
     const originalContent = btn.innerHTML;
     const currentUserId = getCurrentUserId();
-    
+
     // Show loading state
     btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i>`;
     btn.disabled = true;
-    
+
     try {
         // Make API call to trigger workflow with streaming
         const response = await fetch(`/api/users/${currentUserId}/meals/${mealType}/trigger`, {
@@ -960,39 +1235,39 @@ async function triggerPlan(mealType) {
                 'Accept': 'text/event-stream'
             }
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         // Check if response is a stream
         if (response.headers.get('content-type')?.includes('text/event-stream')) {
             console.log('📡 Starting event stream for', mealType, 'planning...');
-            
+
             // Show streaming state
             btn.innerHTML = `<i class="fa-solid fa-satellite-dish fa-pulse"></i> Streaming`;
-            
+
             // Update Status UI immediately
             document.getElementById('status-title').innerText = `${mealType} Planning`;
             document.getElementById('status-subtitle').innerText = `Streaming responses... Started just now`;
-            
+
             // Clear and prepare event stream
             clearEventStream();
-            
+
             // Switch to Status tab to show progress
             switchTab('status');
-            
+
             // Expand event stream to show events
             const container = document.getElementById('event-stream-container');
             const icon = document.getElementById('expand-icon');
             const progress = document.getElementById('simple-progress');
-            
+
             if (container.classList.contains('hidden')) {
                 container.classList.remove('hidden');
                 icon.classList.add('rotate-180');
                 progress.style.opacity = '0';
             }
-            
+
             // Handle the event stream
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
@@ -1001,52 +1276,52 @@ async function triggerPlan(mealType) {
             try {
                 while (true) {
                     const { done, value } = await reader.read();
-                    
+
                     if (done) {
                         console.log('🏁 Event stream completed');
                         break;
                     }
-                    
+
                     // Decode the chunk and add to buffer
                     buffer += decoder.decode(value, { stream: true });
-                    
+
                     // Process complete messages from buffer
                     let newlineIndex;
                     while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
                         const line = buffer.slice(0, newlineIndex).trim();
                         buffer = buffer.slice(newlineIndex + 1);
-                        
+
                         if (line.length === 0) continue; // Skip empty lines
-                        
+
                         // Handle Server-Sent Events format
                         if (line.startsWith('data: ')) {
                             const data = line.slice(6); // Remove 'data: ' prefix
-                            
+
                             if (data === '[DONE]') {
                                 console.log('🔚 Stream completed with [DONE] marker');
                                 break;
                             }
-                            
+
                             try {
                                 const jsonData = JSON.parse(data);
                                 console.log('📦 Event stream data:', jsonData);
                                 window.temp_buffer.push(jsonData);
-                                
+
                                 // Store session ID if present in the event data
                                 if (jsonData.session_id) {
                                     currentSessionId = jsonData.session_id;
                                     console.log('💾 Stored session ID:', currentSessionId);
                                 }
-                                
+
                                 // Render event in UI
-                                const timestamp = new Date().toLocaleTimeString('en-US', { 
-                                    hour12: false, 
-                                    hour: '2-digit', 
-                                    minute: '2-digit', 
-                                    second: '2-digit' 
+                                const timestamp = new Date().toLocaleTimeString('en-US', {
+                                    hour12: false,
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    second: '2-digit'
                                 });
                                 renderEventInStream(jsonData, timestamp);
-                                
+
                                 // Log event details
                                 if (jsonData.type) {
                                     console.log(`📋 Event type: ${jsonData.type}`);
@@ -1057,7 +1332,7 @@ async function triggerPlan(mealType) {
                                 if (jsonData.status) {
                                     console.log(`📊 Status: ${jsonData.status}`);
                                 }
-                                
+
                             } catch (parseError) {
                                 // Handle non-JSON data
                                 console.log('📄 Raw stream data:', data);
@@ -1082,39 +1357,39 @@ async function triggerPlan(mealType) {
             } finally {
                 reader.releaseLock();
             }
-            
+
             // Show completion state
             btn.innerHTML = `<i class="fa-solid fa-check"></i> Completed`;
             console.log('✅ Workflow stream completed successfully');
-            
+
         } else {
             // Fallback to regular JSON response
             const result = await response.json();
             console.log('Workflow triggered successfully:', result);
-            
+
             // Show success state briefly
             btn.innerHTML = `<i class="fa-solid fa-check"></i> Started`;
-            
+
             // Update Status UI
             document.getElementById('status-title').innerText = `${mealType} Planning`;
             document.getElementById('status-subtitle').innerText = `Triggered manually just now`;
-            
+
             // Switch Tab
             switchTab('status');
         }
-        
+
         // Reset button after a brief delay
         setTimeout(() => {
             btn.innerHTML = originalContent;
             btn.disabled = false;
         }, 1500);
-        
+
     } catch (error) {
         console.error('Error triggering workflow:', error);
-        
+
         // Show error state
         btn.innerHTML = `<i class="fa-solid fa-exclamation-triangle"></i> Failed`;
-        
+
         // Reset button after a longer delay for errors
         setTimeout(() => {
             btn.innerHTML = originalContent;
@@ -1129,22 +1404,34 @@ async function triggerPlan(mealType) {
 function renderEventInStream(eventData, timestamp) {
     const container = document.getElementById('event-stream-container');
     const eventElement = document.createElement('div');
-    
+
     // Get event type and determine icon/styling
     const { type, calls, responses, text, isFinalResponse, workflow_status } = eventData;
     let icon, iconColor, title, subtitle, bgColor;
-    
+
     // Handle different workflow statuses for TextResponse events
     if (type === 'TextResponse' && workflow_status && text) {
         if (workflow_status === 'AWAITING_USER_APPROVAL') {
             console.log('🎯 Detected AWAITING_USER_APPROVAL event, showing chat modal:', eventData);
             showChatModal(text, eventData);
         } else if (workflow_status === 'ORDER_CONFIRMED') {
-            console.log('🎉 Detected ORDER_CONFIRMED event, showing celebratory message:', eventData);
+            console.log('🎉 Detected ORDER_CONFIRMED event from stream, showing celebratory message:', eventData);
             showCelebratoryMessage(text);
+
+            // Clean up polling and state when order is confirmed
+            const currentUserId = getCurrentUserId();
+            stopAllPolling();
+            AppState.clearActiveSessionId();
+
+            // Restart active sessions polling after a delay
+            setTimeout(() => {
+                if (currentUserId && currentUserId !== 'create_new') {
+                    startActiveSessionsPolling(currentUserId);
+                }
+            }, 3000); // Wait a bit longer before restarting
         }
     }
-    
+
     switch (type) {
         case 'ToolCall':
             icon = 'fa-cog';
@@ -1153,13 +1440,13 @@ function renderEventInStream(eventData, timestamp) {
             title = calls && calls.length > 0 ? calls.map(call => call.name).join(', ') : 'Tool Call';
             subtitle = calls && calls.length > 0 ? `Called ${calls.length} tool${calls.length > 1 ? 's' : ''}` : 'Executing tool';
             break;
-        
+
         case 'ToolResponse':
             icon = 'fa-check-circle';
             iconColor = 'text-green-400';
             bgColor = 'bg-green-500/10 border-green-500/20';
             title = responses && responses.length > 0 ? responses.map(resp => resp.name).join(', ') : 'Tool Response';
-            subtitle = responses && responses.length > 0 ? 
+            subtitle = responses && responses.length > 0 ?
                 responses.map(resp => {
                     if (resp.response && resp.response.status) {
                         return `Status: ${resp.response.status}`;
@@ -1167,7 +1454,7 @@ function renderEventInStream(eventData, timestamp) {
                     return 'Completed';
                 }).join(', ') : 'Response received';
             break;
-            
+
         case 'TextResponse':
             icon = isFinalResponse ? 'fa-flag-checkered' : 'fa-comment';
             iconColor = isFinalResponse ? 'text-purple-400' : 'text-yellow-400';
@@ -1175,7 +1462,7 @@ function renderEventInStream(eventData, timestamp) {
             title = isFinalResponse ? 'Final Response' : 'Text Response';
             subtitle = text ? (text.length > 100 ? text.substring(0, 100) + '...' : text) : 'Text response received';
             break;
-            
+
         default:
             icon = 'fa-question-circle';
             iconColor = 'text-gray-400';
@@ -1183,9 +1470,9 @@ function renderEventInStream(eventData, timestamp) {
             title = type || 'Unknown Event';
             subtitle = 'Unknown event type';
     }
-    
+
     eventElement.className = `border rounded-lg p-3 ${bgColor} border transition-all hover:shadow-md animate-fade-in`;
-    
+
     eventElement.innerHTML = `
         <div class="flex items-start gap-3">
             <div class="w-8 h-8 rounded-full bg-slate-700/50 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -1205,7 +1492,7 @@ function renderEventInStream(eventData, timestamp) {
             </div>
         </div>
     `;
-    
+
     // Insert at the beginning (newest events first)
     const firstChild = container.querySelector('.text-xs.text-slate-500') || container.firstChild;
     if (firstChild && firstChild.nextSibling) {
@@ -1213,7 +1500,7 @@ function renderEventInStream(eventData, timestamp) {
     } else {
         container.appendChild(eventElement);
     }
-    
+
     // Auto-scroll to show newest events
     container.scrollTop = 0;
 }
@@ -1244,7 +1531,7 @@ function testEventStreamRendering() {
                     }
                 }
             ],
-            "workflow_status": "INITIALIZE"
+            "workflow_status": "IDLE"
         },
         {
             "type": "ToolResponse",
@@ -1256,7 +1543,7 @@ function testEventStreamRendering() {
                     }
                 }
             ],
-            "workflow_status": "INITIALIZE"
+            "workflow_status": "IDLE"
         },
         {
             "type": "ToolCall",
@@ -1291,65 +1578,133 @@ function testEventStreamRendering() {
             "session_id": "test-session-123"
         }
     ];
-    
+
     // Set test session ID for this demo
     currentSessionId = "test-session-123";
-    
+
     // Clear existing events
     clearEventStream();
-    
+
     // Show the event stream
     const container = document.getElementById('event-stream-container');
     const icon = document.getElementById('expand-icon');
     const progress = document.getElementById('simple-progress');
-    
+
     if (container.classList.contains('hidden')) {
         container.classList.remove('hidden');
         icon.classList.add('rotate-180');
         progress.style.opacity = '0';
     }
-    
+
     // Render events with delay to simulate streaming
     sampleEvents.forEach((event, index) => {
         setTimeout(() => {
-            const timestamp = new Date().toLocaleTimeString('en-US', { 
-                hour12: false, 
-                hour: '2-digit', 
-                minute: '2-digit', 
-                second: '2-digit' 
+            const timestamp = new Date().toLocaleTimeString('en-US', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
             });
             renderEventInStream(event, timestamp);
         }, index * 1000); // 1 second delay between events
     });
-    
+
     // Switch to status tab to show the events
     switchTab('status');
+}
+
+// Test function to simulate ORDER_CONFIRMED (for debugging)
+function testOrderConfirmed() {
+    console.log('🧪 Testing ORDER_CONFIRMED flow...');
+    const orderConfirmedEvent = {
+        "type": "TextResponse",
+        "isFinalResponse": true,
+        "text": "🎉 Great choice! Your Ribeye Steak order has been confirmed and is being prepared. Expected delivery time: 25-30 minutes. Order #12345.",
+        "workflow_status": "ORDER_CONFIRMED",
+        "session_id": "test-session-123"
+    };
+
+    // Simulate the event coming through the stream
+    const timestamp = new Date().toLocaleTimeString('en-US', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+    renderEventInStream(orderConfirmedEvent, timestamp);
+}
+
+function displayActiveSessionFound(activeSessionsData) {
+    console.log('📋 Displaying active session found:', activeSessionsData.active_sessions_count);
+    const statusCard = document.getElementById('status-card');
+
+    // Show the status card with active session info
+    showStatusCardWithActiveSessionFound(activeSessionsData);
+
+    // Update status to show session monitoring
+    document.getElementById('status-title').innerText = 'Monitoring Active Session';
+    document.getElementById('status-subtitle').innerText = `Found ${activeSessionsData.active_sessions_count} active session(s). Monitoring for updates...`;
+}
+
+function showStatusCardWithActiveSessionFound(activeSessionsData) {
+    console.log('📋 Showing status card with active session found');
+    const statusCard = document.getElementById('status-card');
+    statusCard.style.display = 'block';
+
+    // Update the content to show session monitoring
+    const statusTitle = document.getElementById('status-title');
+    const statusSubtitle = document.getElementById('status-subtitle');
+    const statusIndicator = document.getElementById('status-indicator');
+    const simpleProgress = document.getElementById('simple-progress');
+
+    if (statusTitle) {
+        statusTitle.innerText = 'Session Monitoring';
+    }
+
+    if (statusSubtitle) {
+        statusSubtitle.innerText = `Monitoring ${activeSessionsData.active_sessions_count} active session(s) for updates...`;
+    }
+
+    if (statusIndicator) {
+        statusIndicator.className = 'w-3 h-3 bg-blue-500 rounded-full animate-pulse';
+    }
+
+    if (simpleProgress) {
+        simpleProgress.style.opacity = '1';
+    }
+
+    // Update the status header indicator
+    const statusHeader = statusCard.querySelector('.text-xs.font-bold');
+    if (statusHeader) {
+        statusHeader.className = 'text-xs font-bold text-blue-400';
+        statusHeader.innerText = '● MONITORING';
+    }
 }
 
 function displayActiveSessions(activeSessionsData) {
     console.log('📋 Displaying active sessions:', activeSessionsData.active_sessions_count);
     const statusCard = document.getElementById('status-card');
     const activeSessionsContainer = document.getElementById('active-sessions-container');
-    
+
     // Show the status card with active session info and event stream
     showStatusCardWithActiveSessions(activeSessionsData);
-    
+
     // Create active sessions container if it doesn't exist
     if (!activeSessionsContainer) {
         const container = document.createElement('div');
         container.id = 'active-sessions-container';
         container.className = 'mb-6 space-y-4';
-        
+
         // Insert before the status card
         statusCard.parentNode.insertBefore(container, statusCard);
     }
-    
+
     // Show the active sessions container
     document.getElementById('active-sessions-container').style.display = 'block';
-    
+
     // Clear existing content
     document.getElementById('active-sessions-container').innerHTML = '';
-    
+
     // Create header
     const header = document.createElement('div');
     header.className = 'bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex items-start gap-3';
@@ -1360,9 +1715,9 @@ function displayActiveSessions(activeSessionsData) {
             <div class="text-xs text-blue-300/80 mt-1">You have ${activeSessionsData.active_sessions_count} ongoing meal planning session(s). Click to resume.</div>
         </div>
     `;
-    
+
     document.getElementById('active-sessions-container').appendChild(header);
-    
+
     // Create session cards
     activeSessionsData.active_sessions.forEach((session, index) => {
         const sessionCard = createActiveSessionCard(session, index);
@@ -1373,23 +1728,23 @@ function displayActiveSessions(activeSessionsData) {
 function createActiveSessionCard(session, index) {
     const card = document.createElement('div');
     card.className = 'bg-slate-800 border border-slate-700 hover:border-slate-600 rounded-xl p-5 transition-all hover:shadow-lg hover:shadow-black/20 cursor-pointer group';
-    
+
     const state = session.state;
     const workflowStatus = state.workflow_status || 'UNKNOWN';
     const mealType = state.meal_type || 'Meal';
     const userName = state.user_name || 'User';
-    
+
     // Format time
     const updateTime = new Date(session.update_time);
-    const timeString = updateTime.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
+    const timeString = updateTime.toLocaleTimeString('en-US', {
+        hour: 'numeric',
         minute: '2-digit',
-        hour12: true 
+        hour12: true
     });
-    
+
     // Get status info
     const statusInfo = getStatusDisplayInfo(workflowStatus);
-    
+
     card.innerHTML = `
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-4">
@@ -1416,13 +1771,13 @@ function createActiveSessionCard(session, index) {
             </div>
         </div>
     `;
-    
+
     return card;
 }
 
 function getStatusDisplayInfo(workflowStatus) {
     switch (workflowStatus) {
-        case 'INITIALIZE':
+        case 'IDLE':
             return {
                 icon: 'fa-play-circle',
                 label: 'Initializing',
@@ -1472,7 +1827,7 @@ function hideActiveSessionsDisplay() {
         activeSessionsContainer.style.display = 'none';
         console.log('✅ Active sessions container hidden');
     }
-    
+
     // Show the default status card and update it to show "no active sessions"
     showStatusCardWithNoActiveSessions();
 }
@@ -1493,13 +1848,13 @@ function showStatusCardWithNoActiveSessions() {
     console.log('📋 Showing status card with no active sessions message');
     const statusCard = document.getElementById('status-card');
     statusCard.style.display = 'block';
-    
+
     // Update the content to show no active sessions
     const statusTitle = document.getElementById('status-title');
     const statusSubtitle = document.getElementById('status-subtitle');
     const statusIndicator = document.getElementById('status-indicator');
     const simpleProgress = document.getElementById('simple-progress');
-    
+
     if (statusTitle) {
         statusTitle.textContent = 'No Active Sessions';
         console.log('✅ Updated status title');
@@ -1516,7 +1871,7 @@ function showStatusCardWithNoActiveSessions() {
         simpleProgress.style.display = 'none';
         console.log('✅ Hidden progress bar');
     }
-    
+
     // Update the status header indicator
     const statusHeader = statusCard.querySelector('.text-xs.font-bold.text-green-400');
     if (statusHeader) {
@@ -1530,24 +1885,24 @@ function showStatusCardWithActiveSessions(activeSessionsData) {
     console.log('📋 Showing status card with active sessions and event stream');
     const statusCard = document.getElementById('status-card');
     statusCard.style.display = 'block';
-    
+
     // Find the most recent active session to display in the status card
     const mostRecentSession = activeSessionsData.active_sessions[0]; // Sessions are ordered by update_time DESC
     const state = mostRecentSession.state;
     const workflowStatus = state.workflow_status || 'UNKNOWN';
     const mealType = state.meal_type || 'Meal';
-    
+
     // Update the content to show active session info
     const statusTitle = document.getElementById('status-title');
     const statusSubtitle = document.getElementById('status-subtitle');
     const statusIndicator = document.getElementById('status-indicator');
     const simpleProgress = document.getElementById('simple-progress');
-    
+
     if (statusTitle) {
         statusTitle.textContent = `${mealType} Planning`;
         console.log('✅ Updated status title for active session');
     }
-    
+
     if (statusSubtitle) {
         const updateTime = new Date(mostRecentSession.update_time);
         const timeString = updateTime.toLocaleString('en-US', {
@@ -1560,18 +1915,18 @@ function showStatusCardWithActiveSessions(activeSessionsData) {
         statusSubtitle.textContent = `Last updated ${timeString}`;
         console.log('✅ Updated status subtitle for active session');
     }
-    
+
     if (statusIndicator) {
         // Show spinning indicator for active sessions
         statusIndicator.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-primary-500 text-xl"></i>';
         console.log('✅ Updated status indicator for active session');
     }
-    
+
     if (simpleProgress) {
         simpleProgress.style.display = 'block';
         console.log('✅ Shown progress bar for active session');
     }
-    
+
     // Update the status header indicator
     const statusHeader = statusCard.querySelector('.text-xs.font-bold');
     if (statusHeader) {
@@ -1595,7 +1950,7 @@ function renderDays() {
         btn.className = `w-full aspect-square rounded-full border border-slate-700 bg-slate-800 text-slate-400 font-bold text-sm hover:border-primary-500 hover:text-white transition-all flex items-center justify-center day-selector`;
         btn.innerText = day;
         btn.onclick = () => {
-            if(btn.classList.contains('bg-primary-600')) {
+            if (btn.classList.contains('bg-primary-600')) {
                 btn.className = `w-full aspect-square rounded-full border border-slate-700 bg-slate-800 text-slate-400 font-bold text-sm hover:border-primary-500 hover:text-white transition-all flex items-center justify-center day-selector`;
             } else {
                 btn.className = `w-full aspect-square rounded-full border-none bg-primary-600 text-white font-bold text-sm shadow-lg shadow-primary-500/30 flex items-center justify-center day-selector`;
@@ -1630,20 +1985,20 @@ function switchTab(tabName) {
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.className = "tab-btn flex-1 py-2.5 px-4 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-700/50 transition-all duration-200";
     });
-    
+
     // Activate current button
     const activeBtn = document.getElementById(`tab-${tabName}`);
-    if(activeBtn) {
+    if (activeBtn) {
         activeBtn.className = "tab-btn flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 bg-slate-700 text-white shadow-sm";
     }
 
     // Hide all sections
     document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
-    
+
     // Show current section
     const activeView = document.getElementById(`view-${tabName}`);
-    if(activeView) activeView.classList.remove('hidden');
-    
+    if (activeView) activeView.classList.remove('hidden');
+
     // If switching to status tab, refresh active sessions
     if (tabName === 'status') {
         const currentUserId = getCurrentUserId();
@@ -1658,11 +2013,11 @@ function addMealSlot(type = "Lunch", start = "12:00", end = "13:00", customName 
     const container = document.getElementById('meal-slots-container');
     const slot = document.createElement('div');
     slot.className = "flex items-center gap-2 bg-slate-900/50 p-2 rounded-lg border border-slate-700/50 animate-fade-in";
-    
+
     const isCustom = !['Breakfast', 'Lunch', 'Dinner'].includes(type);
     const customInputStyle = isCustom ? 'block' : 'none';
     const actualCustomName = isCustom ? (customName || type) : '';
-    
+
     slot.innerHTML = `
         <select class="bg-slate-800 text-xs text-white p-2 rounded border border-slate-700 focus:border-primary-500 outline-none" onchange="toggleCustomNameInput(this)">
             <option ${type === 'Breakfast' ? 'selected' : ''}>Breakfast</option>
@@ -1686,7 +2041,7 @@ function addMealSlot(type = "Lunch", start = "12:00", end = "13:00", customName 
 function toggleCustomNameInput(selectElement) {
     const slot = selectElement.parentElement;
     const customNameInput = slot.querySelector('.custom-meal-name');
-    
+
     if (selectElement.value === 'Custom') {
         customNameInput.style.display = 'block';
         customNameInput.focus();
@@ -1700,7 +2055,7 @@ function toggleCustomNameInput(selectElement) {
 function addPreference() {
     const input = document.getElementById('pref-input');
     const text = input.value.trim();
-    if(text) {
+    if (text) {
         addPreferenceTag(text);
         input.value = "";
     }
@@ -1748,21 +2103,21 @@ function renderMockHistory() {
 async function saveProfile() {
     const btn = document.getElementById('save-btn');
     const originalContent = btn.innerHTML;
-    
+
     btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Saving...`;
     btn.classList.add('opacity-75', 'cursor-not-allowed');
-    
+
     try {
         // Determine user ID - use new user ID if creating new user
         const select = document.getElementById('user-select');
         let currentUserId;
-        
+
         if (select.value === 'create_new') {
             currentUserId = select.dataset.newUserId || `user_${Date.now()}`;
         } else {
             currentUserId = select.value;
         }
-        
+
         const userData = {
             id: currentUserId,
             name: document.getElementById('input-name').value,
@@ -1778,57 +2133,57 @@ async function saveProfile() {
                     const select = slot.querySelector('select');
                     const timeInputs = slot.querySelectorAll('input[type="time"]');
                     const customNameInput = slot.querySelector('.custom-meal-name');
-                    
+
                     let mealType = select.value;
                     if (mealType === 'Custom' && customNameInput && customNameInput.value.trim()) {
                         mealType = customNameInput.value.trim();
                     }
-                    
+
                     return {
                         type: mealType,
                         start: timeInputs[0].value,
                         end: timeInputs[1].value
                     };
-                })                
+                })
             },
             special_instructions: document.getElementById('input-instructions').value
         };
 
         // Save to API
         const result = await saveUserToAPI(userData);
-        
+
         // Update state with saved user data
         AppState.upsertUser(userData);
         AppState.setCurrentUser(currentUserId);
-        
+
         btn.innerHTML = `<i class="fa-solid fa-check mr-2"></i> Saved Successfully`;
         btn.classList.remove('from-blue-600', 'to-blue-500');
         btn.classList.add('from-green-600', 'to-green-500');
-        
+
         // If this was a new user, refresh the dropdown and select the new user
         if (select.value === 'create_new') {
             await populateUserDropdown();
             select.value = currentUserId;
         }
-        
+
         setTimeout(() => {
             btn.innerHTML = originalContent;
             btn.classList.add('from-blue-600', 'to-blue-500');
             btn.classList.remove('from-green-600', 'to-green-500', 'opacity-75', 'cursor-not-allowed');
         }, 2000);
-        
+
         console.log("Profile Saved Successfully:", result);
     } catch (error) {
         btn.innerHTML = `<i class="fa-solid fa-exclamation-triangle mr-2"></i> Save Failed`;
         btn.classList.remove('from-blue-600', 'to-blue-500');
         btn.classList.add('from-red-600', 'to-red-500');
-        
+
         setTimeout(() => {
             btn.innerHTML = originalContent;
             btn.classList.add('from-blue-600', 'to-blue-500');
             btn.classList.remove('from-red-600', 'to-red-500', 'opacity-75', 'cursor-not-allowed');
         }, 3000);
-        
+
         console.error("Error saving profile:", error);
     }
 }

@@ -31,7 +31,7 @@ initial_state: dict[str, Any] = {
     "user_id": "tony_h_stark",
     "user_dietary_preferences": ["pescatarian"],
     "user_allergies": ["gluten", "nuts"],
-    "workflow_status": "INITIALIZE",
+    "workflow_status": "IDLE",
     "meal_options": [],
     "user_feedback": "",
     "user_choice": []

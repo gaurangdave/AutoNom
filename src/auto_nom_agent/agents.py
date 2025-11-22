@@ -1,8 +1,10 @@
 from google.adk.agents import LlmAgent
 # from google.adk.tools.agent_tool import AgentTool
 
+
 from src.utils.workflow_utils import get_workflow
 from .subagents.meal_planner.agent import meal_planner
+from .subagents.meal_choice_verifier.agent import meal_choice_verifier
 from .subagents.meal_order_executor.agent import meal_order_executor
 from src.auto_nom_agent.configs import retry_options, model
 from google.adk.models.google_llm import Gemini
@@ -38,7 +40,7 @@ auto_nom_agent = LlmAgent(
     * Always acknowledge the which workflow stage the user is in.
     * If user request is not about meal planning, politely decline the request with a smile and a sense of humor. You **MUST NOT** call any tools or delegate to any sub agents. 
     """,
-    sub_agents=[meal_planner, meal_order_executor],
+    sub_agents=[meal_planner, meal_choice_verifier, meal_order_executor],
 )
 
 root_agent = auto_nom_agent

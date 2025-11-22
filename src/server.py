@@ -211,12 +211,64 @@ async def get_session_state_value(session_id: str, state_key: str) -> dict[str, 
         )
 
 
+@app.get("/api/users/{user_id}/sessions")
+async def get_user_sessions(user_id: str) -> dict[str, Any]:
+    """
+    Get all sessions for a given user_id.
+    Returns all sessions (both active and completed) for the specified user.
+    """
+    try:
+        AutoNomLogger.api_called_panel(
+            "GET",
+            f"/api/users/{user_id}/sessions",
+            params={"user_id": user_id}
+        )
+        
+        # Check if user exists
+        user = db_manager.get_user(user_id=user_id)
+        if not user:
+            AutoNomLogger.log_error(f"User not found: {user_id}", "GET_USER_SESSIONS")
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Get all sessions for the user
+        all_sessions: list[Any] = db_manager.get_user_sessions("auto_nom_agent", user_id)
+        
+        # Format the response with session states
+        sessions_data: list[dict[str, Any]] = []
+        for session in all_sessions:
+            # treat session as dynamic Any for typing purposes
+            s: Any = session
+            sessions_data.append({
+                "session_id": s.id,
+                "state": s.state,
+                "create_time": s.create_time.isoformat(),
+                "update_time": s.update_time.isoformat()
+            })
+        
+        AutoNomLogger.log_info(f"Retrieved {len(all_sessions)} sessions for user {user_id}", "GET_USER_SESSIONS")
+        return {
+            "user_id": user_id,
+            "sessions_count": len(all_sessions),
+            "sessions": sessions_data,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        AutoNomLogger.log_error(f"Failed to get sessions for user {user_id}: {str(e)}", "GET_USER_SESSIONS")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Failed to retrieve sessions: {str(e)}"
+        )
+
+
 @app.get("/api/users/{user_id}/active-sessions")
 async def get_user_active_sessions(user_id: str) -> dict[str, Any]:
     """
-    Get all active sessions for a given user_id.
+    Get all active session IDs for a given user_id.
     An active session is any session where state.workflow_status is not 'ORDER_CONFIRMED'.
-    Returns the session state for each active session.
+    Returns only the session IDs for active sessions.
     """
     try:
         AutoNomLogger.api_called_panel(
@@ -234,23 +286,18 @@ async def get_user_active_sessions(user_id: str) -> dict[str, Any]:
         # Get active sessions for the user
         active_sessions: list[Any] = db_manager.get_active_user_sessions("auto_nom_agent", user_id)
         
-        # Format the response with session states
-        sessions_data: list[dict[str, Any]] = []
+        # Extract only session IDs
+        session_ids: list[str] = []
         for session in active_sessions:
             # treat session as dynamic Any for typing purposes
             s: Any = session
-            sessions_data.append({
-                "session_id": s.id,
-                "state": s.state,
-                "create_time": s.create_time.isoformat(),
-                "update_time": s.update_time.isoformat()
-            })
+            session_ids.append(s.id)
         
         AutoNomLogger.log_info(f"Retrieved {len(active_sessions)} active sessions for user {user_id}", "GET_ACTIVE_SESSIONS")
         return {
             "user_id": user_id,
             "active_sessions_count": len(active_sessions),
-            "active_sessions": sessions_data,
+            "session_ids": session_ids,
             "timestamp": datetime.now().isoformat()
         }
         
@@ -261,6 +308,56 @@ async def get_user_active_sessions(user_id: str) -> dict[str, Any]:
         raise HTTPException(
             status_code=500, 
             detail=f"Failed to retrieve active sessions: {str(e)}"
+        )
+
+
+@app.get("/api/users/{user_id}/active-sessions/{session_id}/state")
+async def get_user_active_session_state(user_id: str, session_id: str) -> dict[str, Any]:
+    """
+    Get the state for a specific active session by user_id and session_id.
+    Returns the complete session state including workflow_status and other state data.
+    """
+    try:
+        AutoNomLogger.api_called_panel(
+            "GET",
+            f"/api/users/{user_id}/active-sessions/{session_id}/state",
+            params={"user_id": user_id, "session_id": session_id}
+        )
+        
+        # Check if user exists
+        user = db_manager.get_user(user_id=user_id)
+        if not user:
+            AutoNomLogger.log_error(f"User not found: {user_id}", "GET_ACTIVE_SESSION_STATE")
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Get the specific session
+        session = db_manager.get_session_by_id(session_id=session_id)
+        if not session:
+            AutoNomLogger.log_error(f"Session not found: {session_id}", "GET_ACTIVE_SESSION_STATE")
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # Verify session belongs to the user
+        if session.user_id != user_id:
+            AutoNomLogger.log_error(f"Session {session_id} does not belong to user {user_id}", "GET_ACTIVE_SESSION_STATE")
+            raise HTTPException(status_code=403, detail="Session does not belong to user")
+        
+        AutoNomLogger.log_info(f"Retrieved state for session {session_id} for user {user_id}", "GET_ACTIVE_SESSION_STATE")
+        return {
+            "user_id": user_id,
+            "session_id": session_id,
+            "state": session.state,
+            "create_time": session.create_time.isoformat(),
+            "update_time": session.update_time.isoformat(),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        AutoNomLogger.log_error(f"Failed to get state for session {session_id}: {str(e)}", "GET_ACTIVE_SESSION_STATE")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Failed to retrieve session state: {str(e)}"
         )
 
 

@@ -1,8 +1,8 @@
 [
   {
-    "status": "INITIALIZE",
+    "status": "IDLE",
     "meaning": "The workflow has just been triggered (e.g., by a schedule). No work has been done yet.",
-    "action": "Welcome the user and use the meal_planner tool to start researching meal options based on user preferences."
+    "action": "Welcome and delegate the user to meal_planner agent to start meal planning."
   },
   {
     "status": "MEAL_PLANNING_STARTED",
@@ -12,7 +12,7 @@
   {
     "status": "MEAL_PLANNING_COMPLETE",
     "meaning": "Research is finished. The session contains a valid list of 3 meal options.",
-    "action": "Delegate to meal_planner to format and verify these options from the user."
+    "action": "Delegate to meal_choice_verifier to format and verify these options from the user."
   },
   {
     "status": "AWAITING_USER_APPROVAL",
