@@ -11,8 +11,7 @@ const DaySelector = ({ selectedDays, onChange }) => {
     <div className="grid grid-cols-7 gap-2">
       {DAYS.map((day, index) => (
         <button
-          key={index}
-          index={index}
+          key={day}
           type="button"
           onClick={() => toggleDay(index)}
           className={`flex-1 h-12 rounded-lg font-bold text-sm transition-all ${

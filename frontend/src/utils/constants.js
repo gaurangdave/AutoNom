@@ -1,4 +1,4 @@
-export const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+export const DAYS = ['M', 'T', 'W', 'Th', 'F', 'Sa', 'Su'];
 
 export const ALLERGIES_LIST = [
   { name: 'Peanuts', icon: 'bowl-rice' },

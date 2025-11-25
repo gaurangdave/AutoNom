@@ -55,8 +55,8 @@ const Header = () => {
               className="relative bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-48 p-2.5 outline-none cursor-pointer"
             >
               <option value="">Select User</option>
-              {users.map((user,index) => (
-                <option key={user.user_id} value={user.user_id} index={index}>
+              {users.map((user) => (
+                <option key={user.user_id} value={user.user_id}>
                   {user.name}
                 </option>
               ))}
