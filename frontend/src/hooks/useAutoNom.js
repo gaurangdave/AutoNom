@@ -120,7 +120,7 @@ export const useAutoNom = () => {
   // Fetch active sessions for a user
   const fetchActiveSessionsForUser = useCallback(async (userId) => {
     try {
-      const response = await axios.get(`/api/sessions/active/${userId}`);
+      const response = await axios.get(`/api/users/${userId}/active-sessions`);
       return response.data;
     } catch (error) {
       console.error('Error fetching active sessions:', error);
@@ -131,7 +131,7 @@ export const useAutoNom = () => {
   // Fetch session state
   const fetchSessionState = useCallback(async (userId, sessionId) => {
     try {
-      const response = await axios.get(`/api/sessions/${userId}/${sessionId}/state`);
+      const response = await axios.get(`/api/users/${userId}/active-sessions/${sessionId}/state`);
       return response.data;
     } catch (error) {
       console.error('Error fetching session state:', error);
@@ -142,10 +142,8 @@ export const useAutoNom = () => {
   // Submit user response to approval
   const submitUserResponse = useCallback(async (userId, sessionId, userResponse) => {
     try {
-      const response = await axios.post('/api/user_approval', {
-        user_id: userId,
-        session_id: sessionId,
-        user_response: userResponse
+      const response = await axios.post(`/api/sessions/${sessionId}/resume`, {
+        choice: userResponse
       });
       return response.data;
     } catch (error) {
@@ -160,13 +158,12 @@ export const useAutoNom = () => {
     setEventLog([]);
     
     try {
-      const response = await fetch('/api/trigger', {
+      const response = await fetch(`/api/users/${userId}/meals/${mealType}/trigger`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: userId,
-          meal_type: mealType
-        })
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream'
+        }
       });
 
       if (!response.ok) {
