@@ -6,7 +6,7 @@ import { useToast } from '../../hooks/useToast';
 import MealRoutineCard from '../meals/MealRoutineCard';
 
 const MealsTab = () => {
-  const { currentUser, getCurrentUserId } = useUser();
+  const { currentUser, getCurrentUserId, setActiveSessionId } = useUser();
   const { triggerPlan } = useAutoNom();
   const toast = useToast();
   const [planningMeal, setPlanningMeal] = useState(null);
@@ -28,10 +28,19 @@ const MealsTab = () => {
         mealType,
         (eventData) => {
           console.log('Event:', eventData);
-          // Events will be handled in StatusTab
+          // Store session ID in UserContext when received
+          if (eventData.session_id) {
+            console.log('[MealsTab] Setting active session ID:', eventData.session_id);
+            setActiveSessionId(eventData.session_id);
+          }
         },
-        () => {
-          console.log('Planning completed');
+        (responseData) => {
+          console.log('Planning completed:', responseData);
+          // Also set session ID from completion response
+          if (responseData?.session_id) {
+            console.log('[MealsTab] Setting active session ID from completion:', responseData.session_id);
+            setActiveSessionId(responseData.session_id);
+          }
           setPlanningMeal(null);
         },
         (error) => {

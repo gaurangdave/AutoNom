@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from typing import Any
 from datetime import datetime
 from contextlib import asynccontextmanager
+import asyncio
 
 # Local Imports
 from src.agentic_workflows.auto_nom import AutoNom
@@ -79,13 +80,13 @@ async def create_user(user: UserProfile) -> UserProfile:
 # --- Workflow APIs ---
 
 
-@app.post("/api/users/{user_id}/meals/{meal_type}/trigger")
-async def trigger_workflow(user_id: str, meal_type: str):
+@app.post("/api/users/{user_id}/meals/{meal_type}/trigger", response_model=None)
+async def trigger_workflow(user_id: str, meal_type: str, streaming: bool = False):
     try:
         AutoNomLogger.api_called_panel(
             "POST",
             f"/api/users/{user_id}/meals/{meal_type}/trigger",
-            params={"user_id": user_id, "meal_type": meal_type},
+            params={"user_id": user_id, "meal_type": meal_type, "streaming": streaming},
             user_id=user_id
         )
         AutoNomLogger.workflow_trigger_panel(user_id, meal_type)
@@ -107,11 +108,30 @@ async def trigger_workflow(user_id: str, meal_type: str):
         auto_nom = AutoNom(current_user, meal_type=meal_type)
         user_input = f"Plan a {meal_type} for {current_user.name}"
 
-        # Use the new SSE event stream method from AutoNom class
-        return StreamingResponse(
-            auto_nom.get_sse_event_stream(user_input),
-            media_type="text/event-stream"
-        )
+        # Return based on streaming flag
+        if streaming:
+            # Use the new SSE event stream method from AutoNom class
+            return StreamingResponse(
+                auto_nom.get_sse_event_stream(user_input),
+                media_type="text/event-stream"
+            )
+        else:
+            # Fire and forget: start workflow in background
+            async def run_workflow():
+                async for _ in auto_nom.run(user_input=user_input):
+                    pass  # Consume all events
+            
+            # Start the workflow but don't wait for it
+            asyncio.create_task(run_workflow())
+            
+            # Return immediately with session info
+            return {
+                "session_id": auto_nom.session_id,
+                "workflow_status": "STARTED",
+                "user_id": user_id,
+                "meal_type": meal_type,
+                "timestamp": datetime.now().isoformat()
+            }
     except Exception as e:
         AutoNomLogger.workflow_trigger_error(user_id, meal_type, str(e))
         raise HTTPException(

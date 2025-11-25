@@ -152,74 +152,55 @@ export const useAutoNom = () => {
     }
   }, []);
 
-  // Trigger plan with streaming events
+  // Trigger plan with non-streaming API
   const triggerPlan = useCallback(async (userId, mealType, onEvent, onComplete, onError) => {
     setIsProcessing(true);
     setEventLog([]);
     
     try {
-      const response = await fetch(`/api/users/${userId}/meals/${mealType}/trigger`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'text/event-stream'
+      console.log('[useAutoNom] Triggering plan:', { userId, mealType });
+      const response = await axios.post(
+        `/api/users/${userId}/meals/${mealType}/trigger?streaming=false`
+      );
+
+      console.log('[useAutoNom] Trigger response:', response.data);
+
+      if (response.data) {
+        const { session_id, workflow_status } = response.data;
+        
+        console.log('[useAutoNom] Setting session ID:', session_id);
+        
+        // Store session ID
+        if (session_id) {
+          setCurrentSessionId(session_id);
+          console.log('[useAutoNom] Session ID set to:', session_id);
         }
-      });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+        // Add event to log
+        const eventData = {
+          type: 'WorkflowStarted',
+          session_id,
+          workflow_status,
+          user_id: userId,
+          meal_type: mealType,
+          timestamp: new Date().toLocaleTimeString('en-US', {
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+          })
+        };
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
+        setEventLog(prev => [...prev, eventData]);
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            
-            if (data === '[DONE]') {
-              setIsProcessing(false);
-              if (onComplete) onComplete();
-              continue;
-            }
-
-            try {
-              const eventData = JSON.parse(data);
-              
-              // Store session ID if present
-              if (eventData.session_id) {
-                setCurrentSessionId(eventData.session_id);
-              }
-
-              // Add event to log
-              setEventLog(prev => [...prev, {
-                ...eventData,
-                timestamp: new Date().toLocaleTimeString('en-US', {
-                  hour12: false,
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit'
-                })
-              }]);
-
-              // Call the event handler
-              if (onEvent) onEvent(eventData);
-
-            } catch (err) {
-              console.error('Error parsing event:', err);
-            }
-          }
-        }
+        // Call the event handler
+        if (onEvent) onEvent(eventData);
+        
+        setIsProcessing(false);
+        if (onComplete) onComplete(response.data);
       }
     } catch (error) {
-      console.error('Error in triggerPlan:', error);
+      console.error('[useAutoNom] Error in triggerPlan:', error);
       setIsProcessing(false);
       if (onError) onError(error);
     }
