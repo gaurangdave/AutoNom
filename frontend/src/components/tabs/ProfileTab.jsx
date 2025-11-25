@@ -74,13 +74,16 @@ const ProfileTab = () => {
 
       const savedUser = await saveUserToAPI(userData);
       
-      // Update local state - upsertUser will update both users array and currentUser
+      console.log('User saved, updating context with:', savedUser);
+      
+      // Update local state - upsertUser will update both users array
       upsertUser(savedUser);
       
-      // Ensure currentUserId is updated to match the saved user (important for new users)
-      if (currentUserId !== savedUser.user_id) {
-        selectUser(savedUser.user_id);
-      }
+      // Always select the saved user to ensure proper sync
+      // This will update both currentUserId and trigger the useEffect in UserContext
+      selectUser(savedUser.user_id);
+      
+      console.log('User upserted and selected:', savedUser.user_id);
 
       alert('Profile saved successfully!');
     } catch (error) {

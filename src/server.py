@@ -55,7 +55,7 @@ async def list_users():
 
 
 @app.post("/api/users")
-async def create_user(user: UserProfile) -> dict[str, Any]:
+async def create_user(user: UserProfile) -> UserProfile:
     try:
         AutoNomLogger.api_called_panel(
             "POST",
@@ -68,7 +68,8 @@ async def create_user(user: UserProfile) -> dict[str, Any]:
         db_manager.upsert_user(user)
 
         AutoNomLogger.user_operation_success(user.name, user.id)
-        return {"status": "success", "user_id": user.id, "timestamp": datetime.now().isoformat()}
+        # Return the full user profile instead of just a status message
+        return user
 
     except Exception as e:
         AutoNomLogger.user_operation_error(user.id, str(e))
