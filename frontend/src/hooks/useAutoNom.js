@@ -5,35 +5,46 @@ import axios from 'axios';
 const transformAPIUserToFrontend = (apiUser) => {
   if (!apiUser) return null;
   
-  // Convert schedule.days array ["m", "t", "w", "t"] to boolean array [true, true, true, true, false, false, false]
-  // API format: "m" = Monday, "t" = Tuesday, "w" = Wednesday, "th" = Thursday, "f" = Friday, "s" = Saturday, "su" = Sunday
-  // But the API returns ["m", "t", "w", "t"] which seems wrong - let's assume it's positional
+  // Convert schedule.days array to boolean array [Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday]
+  // API format uses unambiguous identifiers: "m", "tu", "w", "th", "f", "sa", "su"
+  // For backwards compatibility with old data, support ambiguous single-letter formats
   const scheduleBooleans = [false, false, false, false, false, false, false];
   
   if (apiUser.schedule?.days && Array.isArray(apiUser.schedule.days)) {
-    // Try to match each day string to the day of week
+    // Map day abbreviations to indices (Monday=0, Sunday=6)
     const dayMap = { 
       'm': 0,      // Monday
-      'tu': 1,     // Tuesday  
-      't': 1,      // Tuesday (alternate)
+      'tu': 1,     // Tuesday
       'w': 2,      // Wednesday
       'th': 3,     // Thursday
       'f': 4,      // Friday
-      's': 5,      // Saturday
-      'sa': 5,     // Saturday (alternate)
+      'sa': 5,     // Saturday
       'su': 6      // Sunday
     };
+    
+    // Track ambiguous 't' values for backward compatibility with old database data
+    const ambiguousTCount = apiUser.schedule.days.filter(d => d.toLowerCase().trim() === 't').length;
+    let tProcessed = 0;
     
     apiUser.schedule.days.forEach((day) => {
       const dayLower = day.toLowerCase().trim();
       let index = dayMap[dayLower];
       
-      // If we have multiple 't' values, assume they are sequential (t, th)
+      // Handle legacy ambiguous format: 't' could be Tuesday or Thursday
+      // If multiple 't' values exist, treat first as Tuesday, second as Thursday
       if (dayLower === 't') {
-        // Check if we already have Tuesday selected
-        if (scheduleBooleans[1]) {
-          index = 3; // Make it Thursday
+        if (ambiguousTCount > 1 && tProcessed === 0) {
+          index = 1; // First 't' = Tuesday
+        } else if (ambiguousTCount > 1 && tProcessed === 1) {
+          index = 3; // Second 't' = Thursday
+        } else {
+          index = 1; // Single 't' = Tuesday (default)
         }
+        tProcessed++;
+      }
+      // Handle legacy ambiguous format: 's' could be Saturday or Sunday
+      else if (dayLower === 's') {
+        index = 5; // Default 's' to Saturday
       }
       
       if (index !== undefined) {
@@ -63,8 +74,10 @@ const transformAPIUserToFrontend = (apiUser) => {
 const transformFrontendUserToAPI = (frontendUser) => {
   if (!frontendUser) return null;
   
-  // Convert boolean array [true, true, true, true, false, false, false] to days array ["m", "t", "w", "th"]
-  const dayNames = ['m', 't', 'w', 'th', 'f', 's', 'su'];
+  // Convert boolean array to unambiguous day identifiers
+  // Frontend: [Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday]
+  // API: ["m", "tu", "w", "th", "f", "sa", "su"]
+  const dayNames = ['m', 'tu', 'w', 'th', 'f', 'sa', 'su'];
   const selectedDays = [];
   frontendUser.schedule.forEach((isSelected, index) => {
     if (isSelected) {
