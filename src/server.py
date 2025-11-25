@@ -138,8 +138,8 @@ async def trigger_workflow(user_id: str, meal_type: str, streaming: bool = False
             status_code=500, detail=f"Failed to trigger workflow: {str(e)}")
 
 
-@app.post("/api/sessions/{session_id}/resume")
-async def resume_workflow(session_id: str, req: ResumeRequest):
+@app.post("/api/sessions/{session_id}/resume", response_model=None)
+async def resume_workflow(session_id: str, req: ResumeRequest, streaming: bool = False):
     """
     PHASE 2: Handle User Input & Finish.
     """
@@ -147,7 +147,7 @@ async def resume_workflow(session_id: str, req: ResumeRequest):
         AutoNomLogger.api_called_panel(
             "POST",
             f"/api/sessions/{session_id}/resume",
-            params={"choice": req.choice},
+            params={"choice": req.choice, "streaming": streaming},
         )
         
         # step 1: Get the user_id for the given session_id
@@ -177,11 +177,33 @@ async def resume_workflow(session_id: str, req: ResumeRequest):
         auto_nom = AutoNom(current_user, session_id=session_id)
         user_input = f"{req.choice}"
 
-        # Use the new SSE event stream method from AutoNom class
-        return StreamingResponse(
-            auto_nom.get_sse_event_stream(user_input),
-            media_type="text/event-stream"
-        )
+        # Return based on streaming flag
+        if streaming:
+            # Use the new SSE event stream method from AutoNom class
+            return StreamingResponse(
+                auto_nom.get_sse_event_stream(user_input),
+                media_type="text/event-stream"
+            )
+        else:
+            # Fire and forget: start workflow in background
+            async def run_workflow():
+                async for _ in auto_nom.run(user_input=user_input):
+                    pass  # Consume all events
+            
+            # Start the workflow but don't wait for it
+            asyncio.create_task(run_workflow())
+            
+            # Get current workflow status
+            workflow_status = db_manager.get_session_state_val(session_id, "workflow_status")
+            
+            # Return immediately with session info
+            return {
+                "session_id": session_id,
+                "workflow_status": workflow_status or "PROCESSING",
+                "user_id": user_id,
+                "user_choice": req.choice,
+                "timestamp": datetime.now().isoformat()
+            }
      
     except Exception as e:
         AutoNomLogger.log_error(

@@ -142,12 +142,36 @@ export const useAutoNom = () => {
   // Submit user response to approval
   const submitUserResponse = useCallback(async (userId, sessionId, userResponse) => {
     try {
-      const response = await axios.post(`/api/sessions/${sessionId}/resume`, {
-        choice: userResponse
-      });
+      console.log('[useAutoNom] Submitting user response:', { userId, sessionId, userResponse });
+      const response = await axios.post(
+        `/api/sessions/${sessionId}/resume?streaming=false`,
+        { choice: userResponse }
+      );
+      
+      console.log('[useAutoNom] Resume response:', response.data);
+      
+      if (response.data) {
+        // Add event to log
+        const eventData = {
+          type: 'UserResponseSubmitted',
+          session_id: response.data.session_id,
+          workflow_status: response.data.workflow_status,
+          user_id: response.data.user_id,
+          user_choice: response.data.user_choice,
+          timestamp: new Date().toLocaleTimeString('en-US', {
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+          })
+        };
+        
+        setEventLog(prev => [...prev, eventData]);
+      }
+      
       return response.data;
     } catch (error) {
-      console.error('Error submitting user response:', error);
+      console.error('[useAutoNom] Error submitting user response:', error);
       throw error;
     }
   }, []);
