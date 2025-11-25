@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import { X, Send } from 'lucide-react';
 import { marked } from 'marked';
+import { useToast } from '../../hooks/useToast';
 
 const SelectionModal = ({ isOpen, onClose, message, onSubmit }) => {
   const [response, setResponse] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const toast = useToast();
 
   if (!isOpen) return null;
 
   const handleSubmit = async () => {
     if (!response.trim()) {
-      alert('Please enter a response');
+      toast.warning('Please enter a response');
       return;
     }
 
@@ -21,7 +23,7 @@ const SelectionModal = ({ isOpen, onClose, message, onSubmit }) => {
       onClose();
     } catch (error) {
       console.error('Error submitting response:', error);
-      alert('Failed to submit response. Please try again.');
+      toast.error('Failed to submit response. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

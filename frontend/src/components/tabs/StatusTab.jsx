@@ -2,11 +2,13 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Info, PartyPopper } from 'lucide-react';
 import { useUser } from '../../hooks/useUser';
 import { useAutoNom } from '../../hooks/useAutoNom';
+import { useToast } from '../../hooks/useToast';
 import StatusCard from '../status/StatusCard';
 import SelectionModal from '../status/SelectionModal';
 
 const StatusTab = () => {
   const { getCurrentUserId, activeSessionId, setActiveSessionId } = useUser();
+  const toast = useToast();
   const { 
     eventLog, 
     currentSessionId, 
@@ -134,7 +136,7 @@ const StatusTab = () => {
   const handleModalSubmit = async (response) => {
     const userId = getCurrentUserId();
     if (!userId || !currentSessionId) {
-      alert('Session information not available');
+      toast.error('Session information not available');
       return;
     }
 

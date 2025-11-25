@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { Info } from 'lucide-react';
 import { useUser } from '../../hooks/useUser';
 import { useAutoNom } from '../../hooks/useAutoNom';
+import { useToast } from '../../hooks/useToast';
 import MealRoutineCard from '../meals/MealRoutineCard';
 
 const MealsTab = () => {
   const { currentUser, getCurrentUserId } = useUser();
   const { triggerPlan } = useAutoNom();
+  const toast = useToast();
   const [planningMeal, setPlanningMeal] = useState(null);
 
   const meals = currentUser?.meals || [];
@@ -14,7 +16,7 @@ const MealsTab = () => {
   const handlePlanNow = async (mealType) => {
     const userId = getCurrentUserId();
     if (!userId) {
-      alert('Please select a user first');
+      toast.warning('Please select a user first');
       return;
     }
 
@@ -34,7 +36,7 @@ const MealsTab = () => {
         },
         (error) => {
           console.error('Planning error:', error);
-          alert('Failed to start meal planning. Please try again.');
+          toast.error('Failed to start meal planning. Please try again.');
           setPlanningMeal(null);
         }
       );
