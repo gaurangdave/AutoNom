@@ -117,6 +117,17 @@ export const useAutoNom = () => {
     }
   }, []);
 
+  // Fetch all sessions for a user
+  const fetchUserSessions = useCallback(async (userId) => {
+    try {
+      const response = await axios.get(`/api/users/${userId}/sessions`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user sessions:', error);
+      return null;
+    }
+  }, []);
+
   // Fetch active sessions for a user
   const fetchActiveSessionsForUser = useCallback(async (userId) => {
     try {
@@ -236,6 +247,7 @@ export const useAutoNom = () => {
     currentSessionId,
     fetchUsers,
     saveUserToAPI,
+    fetchUserSessions,
     fetchActiveSessionsForUser,
     fetchSessionState,
     submitUserResponse,

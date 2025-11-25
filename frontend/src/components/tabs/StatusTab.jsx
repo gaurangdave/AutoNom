@@ -5,6 +5,7 @@ import { useAutoNom } from '../../hooks/useAutoNom';
 import { useToast } from '../../hooks/useToast';
 import StatusCard from '../status/StatusCard';
 import SelectionModal from '../status/SelectionModal';
+import SessionHistory from '../status/SessionHistory';
 
 const StatusTab = () => {
   const { getCurrentUserId, activeSessionId } = useUser();
@@ -12,6 +13,7 @@ const StatusTab = () => {
   const { 
     eventLog, 
     fetchSessionState,
+    fetchUserSessions,
     submitUserResponse
   } = useAutoNom();
 
@@ -23,6 +25,36 @@ const StatusTab = () => {
   const [modalMessage, setModalMessage] = useState('');
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationMessage, setCelebrationMessage] = useState('');
+  const [sessionHistory, setSessionHistory] = useState([]);
+  const [selectedSessionForChat, setSelectedSessionForChat] = useState(null);
+
+  // Fetch session history on component mount and when activeSessionId changes
+  useEffect(() => {
+    const userId = getCurrentUserId();
+    if (!userId) return;
+
+    const loadSessionHistory = async () => {
+      try {
+        const data = await fetchUserSessions(userId);
+        if (data && data.sessions) {
+          // Sort sessions by create_time, newest first
+          const sortedSessions = [...data.sessions].sort((a, b) => 
+            new Date(b.create_time) - new Date(a.create_time)
+          );
+          setSessionHistory(sortedSessions);
+        }
+      } catch (error) {
+        console.error('[StatusTab] Error loading session history:', error);
+      }
+    };
+
+    loadSessionHistory();
+    
+    // Refresh session history every 10 seconds
+    const historyInterval = setInterval(loadSessionHistory, 10000);
+    
+    return () => clearInterval(historyInterval);
+  }, [getCurrentUserId, fetchUserSessions, activeSessionId]);
 
   // Monitor event log for state changes
   useEffect(() => {
@@ -159,16 +191,30 @@ const StatusTab = () => {
     };
   }, [activeSessionId, getCurrentUserId, fetchSessionState, showModal]);
 
+  const handleChatClick = (session) => {
+    const message = session.state?.meal_choice_verification_message;
+    if (message) {
+      setSelectedSessionForChat(session);
+      setModalMessage(message);
+      setShowModal(true);
+    }
+  };
+
   const handleModalSubmit = async (response) => {
     const userId = getCurrentUserId();
-    if (!userId || !activeSessionId) {
+    
+    // Use selected session from history if available, otherwise use active session
+    const sessionId = selectedSessionForChat?.session_id || activeSessionId;
+    
+    if (!userId || !sessionId) {
       toast.error('Session information not available');
       return;
     }
 
     try {
-      await submitUserResponse(userId, activeSessionId, response);
+      await submitUserResponse(userId, sessionId, response);
       setShowModal(false);
+      setSelectedSessionForChat(null);
       
       // Update status
       setStatusTitle('Processing Your Response');
@@ -182,10 +228,11 @@ const StatusTab = () => {
 
   const handleModalClose = () => {
     setShowModal(false);
+    setSelectedSessionForChat(null);
   };
 
   return (
-    <div>
+    <div className="space-y-6">
       {/* Status Card */}
       <StatusCard
         title={statusTitle}
@@ -203,6 +250,13 @@ const StatusTab = () => {
           </div>
         </div>
       )}
+
+      {/* Session History */}
+      <SessionHistory
+        sessions={sessionHistory}
+        currentSessionId={activeSessionId}
+        onChatClick={handleChatClick}
+      />
 
       {/* Selection Modal */}
       <SelectionModal
