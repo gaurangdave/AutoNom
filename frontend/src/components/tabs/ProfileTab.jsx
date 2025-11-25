@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { IdCard, Calendar, Clock, Sliders, AlertTriangle, MessageSquare, Save } from 'lucide-react';
 import { useUser } from '../../hooks/useUser';
 import { useAutoNom } from '../../hooks/useAutoNom';
+import { useToast } from '../../hooks/useToast';
 import DaySelector from '../profile/DaySelector';
 import MealSlotList from '../profile/MealSlotList';
 import PreferenceInput from '../profile/PreferenceInput';
@@ -10,6 +11,7 @@ import AllergyGrid from '../profile/AllergyGrid';
 const ProfileTab = () => {
   const { currentUser, currentUserId, upsertUser, selectUser } = useUser();
   const { saveUserToAPI } = useAutoNom();
+  const toast = useToast();
   
   const [name, setName] = useState('');
   const [selectedDays, setSelectedDays] = useState([false, false, false, false, false, false, false]);
@@ -50,12 +52,12 @@ const ProfileTab = () => {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      alert('Please enter a name');
+      toast.warning('Please enter a name');
       return;
     }
 
     if (meals.length === 0) {
-      alert('Please add at least one meal slot');
+      toast.warning('Please add at least one meal slot');
       return;
     }
 
@@ -85,10 +87,10 @@ const ProfileTab = () => {
       
       console.log('User upserted and selected:', savedUser.user_id);
 
-      alert('Profile saved successfully!');
+      toast.success('Profile saved successfully!');
     } catch (error) {
       console.error('Error saving profile:', error);
-      alert('Failed to save profile. Please try again.');
+      toast.error('Failed to save profile. Please try again.');
     } finally {
       setIsSaving(false);
     }
