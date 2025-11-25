@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X, Send } from 'lucide-react';
-import { marked } from 'marked';
+import ReactMarkdown from 'react-markdown';
 import { useToast } from '../../hooks/useToast';
 
 const SelectionModal = ({ isOpen, onClose, message, onSubmit }) => {
@@ -36,17 +36,6 @@ const SelectionModal = ({ isOpen, onClose, message, onSubmit }) => {
     }
   };
 
-  // Parse markdown
-  const renderMarkdown = () => {
-    try {
-      const html = marked(message);
-      return { __html: html };
-    } catch (error) {
-      console.error('Error parsing markdown:', error);
-      return { __html: message };
-    }
-  };
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
       <div className="bg-slate-800 border border-slate-700 rounded-2xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col shadow-2xl">
@@ -75,10 +64,11 @@ const SelectionModal = ({ isOpen, onClose, message, onSubmit }) => {
               <span>🤖</span>
               <span>Agent Message</span>
             </div>
-            <div
-              className="prose prose-sm prose-invert max-w-none"
-              dangerouslySetInnerHTML={renderMarkdown()}
-            />
+            <div className="prose prose-sm prose-invert max-w-none">
+              <ReactMarkdown>
+                {message}
+              </ReactMarkdown>
+            </div>
           </div>
         </div>
 
