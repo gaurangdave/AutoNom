@@ -10,7 +10,12 @@ import asyncio
 from src.agentic_workflows.auto_nom import AutoNom
 from src.db import db_manager
 from src.schema.users import ResumeRequest, UserProfile
-from src.utils.logger import AutoNomLogger
+from utils.logger import ServiceLogger
+from rich.console import Console
+from rich.table import Table
+from rich import box
+
+console = Console()
 
 # Lifespan context manager
 
@@ -19,12 +24,13 @@ from src.utils.logger import AutoNomLogger
 async def lifespan(app: FastAPI):
     # Startup
     db_manager.init_db()
-    AutoNomLogger.startup_message()
+    ServiceLogger.startup_message("Auto-Nom API", port=8000)
+    ServiceLogger.log_success("Database initialized successfully")
 
     yield
 
     # Shutdown
-    AutoNomLogger.shutdown_message()
+    ServiceLogger.shutdown_message("Auto-Nom API")
 
 app = FastAPI(title="Auto-Nom API", version="1.0.0", lifespan=lifespan)
 
@@ -34,8 +40,8 @@ app.mount("/static", StaticFiles(directory="./src/static"), name="static")
 
 @app.get("/api/")
 async def root():
-    AutoNomLogger.api_called_panel("GET", "/api/")
-    AutoNomLogger.health_check()
+    ServiceLogger.api_called_panel("GET", "/api/")
+    ServiceLogger.health_check()
     return {"message": "Hello Auto Nom", "status": "healthy", "timestamp": datetime.now().isoformat()}
 
 # --- User APIs ---
@@ -44,13 +50,32 @@ async def root():
 @app.get("/api/users")
 async def list_users():
     try:
-        AutoNomLogger.api_called_panel("GET", "/api/users")
-        AutoNomLogger.fetching_users()
+        ServiceLogger.api_called_panel("GET", "/api/users")
+        ServiceLogger.log_info("Fetching all users from database...", "API")
         users = db_manager.get_all_users()
-        AutoNomLogger.users_retrieved_table(users)
+        
+        # Display users in a formatted table
+        table = Table(title="Users Retrieved", box=box.MINIMAL)
+        table.add_column("ID", style="cyan")
+        table.add_column("Name", style="magenta")
+        table.add_column("Preferences", style="green")
+        table.add_column("Allergies", style="red")
+        
+        for user in users:
+            preferences_str = ", ".join(user.preferences)
+            allergies_str = ", ".join(user.allergies)
+            table.add_row(
+                user.id,
+                user.name,
+                preferences_str or "None",
+                allergies_str or "None"
+            )
+        
+        console.print(table)
+        ServiceLogger.log_success(f"Successfully retrieved {len(users)} users")
         return users
     except Exception as e:
-        AutoNomLogger.user_retrieval_error(str(e))
+        ServiceLogger.log_error("Error retrieving users", "API", error=e)
         raise HTTPException(
             status_code=500, detail="Internal server error while retrieving users")
 
@@ -58,22 +83,33 @@ async def list_users():
 @app.post("/api/users")
 async def create_user(user: UserProfile) -> UserProfile:
     try:
-        AutoNomLogger.api_called_panel(
+        ServiceLogger.api_called_panel(
             "POST",
             "/api/users",
             params={"user_id": user.id, "name": user.name,
                     "preferences_count": len(user.preferences)}
         )
-        AutoNomLogger.user_operation_panel_from_profile(user)
+        ServiceLogger.log_panel(
+            "👤 User Operation",
+            f"[bold yellow]Creating/Updating User[/bold yellow]\n"
+            f"[cyan]ID:[/cyan] {user.id}\n"
+            f"[cyan]Name:[/cyan] {user.name}\n"
+            f"[cyan]Preferences:[/cyan] {', '.join(user.preferences) if user.preferences else 'None'}\n"
+            f"[cyan]Allergies:[/cyan] {', '.join(user.allergies) if user.allergies else 'None'}\n"
+            f"[cyan]Schedule Days:[/cyan] {', '.join(user.schedule.get('days', [])) if user.schedule else 'None'}\n"
+            f"[cyan]Meal Slots:[/cyan] {len(user.schedule.get('meals', [])) if user.schedule else 0} meals\n"
+            f"[cyan]Special Instructions:[/cyan] {user.special_instructions or 'None'}",
+            "blue"
+        )
 
         db_manager.upsert_user(user)
 
-        AutoNomLogger.user_operation_success(user.name, user.id)
+        ServiceLogger.log_success(f"User '{user.name}' (ID: {user.id}) created/updated successfully!", "USER")
         # Return the full user profile instead of just a status message
         return user
 
     except Exception as e:
-        AutoNomLogger.user_operation_error(user.id, str(e))
+        ServiceLogger.log_error(f"Failed to create/update user {user.id}", "USER", error=e)
         raise HTTPException(
             status_code=500, detail=f"Failed to create/update user: {str(e)}")
 
@@ -83,24 +119,31 @@ async def create_user(user: UserProfile) -> UserProfile:
 @app.post("/api/users/{user_id}/meals/{meal_type}/trigger", response_model=None)
 async def trigger_workflow(user_id: str, meal_type: str, streaming: bool = False) -> dict[str, Any] | StreamingResponse:
     try:
-        AutoNomLogger.api_called_panel(
+        ServiceLogger.api_called_panel(
             "POST",
             f"/api/users/{user_id}/meals/{meal_type}/trigger",
             params={"user_id": user_id, "meal_type": meal_type, "streaming": streaming},
             user_id=user_id
         )
-        AutoNomLogger.workflow_trigger_panel(user_id, meal_type)
+        ServiceLogger.log_panel(
+            "🍽️ Workflow Trigger",
+            f"[bold cyan]Triggering Meal Workflow[/bold cyan]\n"
+            f"[yellow]User ID:[/yellow] {user_id}\n"
+            f"[yellow]Meal Type:[/yellow] {meal_type}\n"
+            f"[yellow]Timestamp:[/yellow] {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            "cyan"
+        )
         # step 1: Read preferences, allergies & special_instructions from database
-        AutoNomLogger.log_info("Step 1: Get User Details")
+        ServiceLogger.log_info("Step 1: Get User Details")
         current_user = db_manager.get_user(user_id=user_id)
         if current_user:
-            AutoNomLogger.log_debug(
+            ServiceLogger.log_debug(
                 f"Found user: {current_user.id}",
                 "USER_DETAILS",
                 **current_user.model_dump()
             )
         else:
-            AutoNomLogger.log_error(
+            ServiceLogger.log_error(
                 f"Step 1 Failed - Cannot find user with ID {user_id}")
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -133,7 +176,7 @@ async def trigger_workflow(user_id: str, meal_type: str, streaming: bool = False
                 "timestamp": datetime.now().isoformat()
             }
     except Exception as e:
-        AutoNomLogger.workflow_trigger_error(user_id, meal_type, str(e))
+        ServiceLogger.log_error(f"Workflow trigger failed for user {user_id}, meal: {meal_type}", "WORKFLOW", error=e)
         raise HTTPException(
             status_code=500, detail=f"Failed to trigger workflow: {str(e)}")
 
@@ -144,7 +187,7 @@ async def resume_workflow(session_id: str, req: ResumeRequest, streaming: bool =
     PHASE 2: Handle User Input & Finish.
     """
     try:
-        AutoNomLogger.api_called_panel(
+        ServiceLogger.api_called_panel(
             "POST",
             f"/api/sessions/{session_id}/resume",
             params={"choice": req.choice, "streaming": streaming},
@@ -154,7 +197,7 @@ async def resume_workflow(session_id: str, req: ResumeRequest, streaming: bool =
         session = db_manager.get_session_by_id(session_id=session_id)
         
         if not session:
-            AutoNomLogger.log_error(f"Cannot fine session for {session_id}", "RESUME_WORKFLOW")
+            ServiceLogger.log_error(f"Cannot fine session for {session_id}", "RESUME_WORKFLOW")
             raise HTTPException(status_code=404, detail=f"Cannot fine session for {session_id}")
         
         user_id = session.user_id
@@ -162,13 +205,13 @@ async def resume_workflow(session_id: str, req: ResumeRequest, streaming: bool =
         # step 2: Load user preferences from user id
         current_user = db_manager.get_user(user_id=user_id)
         if current_user:
-            AutoNomLogger.log_debug(
+            ServiceLogger.log_debug(
                 f"Found user: {current_user.id}",
                 "USER_DETAILS",
                 **current_user.model_dump()
             )
         else:
-            AutoNomLogger.log_error(
+            ServiceLogger.log_error(
                 f"Step 1 Failed - Cannot find user with ID {user_id}")
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -206,7 +249,7 @@ async def resume_workflow(session_id: str, req: ResumeRequest, streaming: bool =
             }
      
     except Exception as e:
-        AutoNomLogger.log_error(
+        ServiceLogger.log_error(
             f"Failed to resume workflow for session : {session_id}", "RESUME_WORKFLOW", e)
         raise HTTPException(
             status_code=500, detail=f"Failed to resume workflow: {str(e)}")
@@ -218,7 +261,7 @@ async def get_session_state_value(session_id: str, state_key: str) -> dict[str, 
     Get a specific state value from a session by session ID and state key.
     """
     try:
-        AutoNomLogger.api_called_panel(
+        ServiceLogger.api_called_panel(
             "GET",
             f"/api/sessions/{session_id}/state/{state_key}",
             params={"session_id": session_id, "state_key": state_key}
@@ -230,13 +273,13 @@ async def get_session_state_value(session_id: str, state_key: str) -> dict[str, 
             # Check if session exists at all
             session = db_manager.get_session_by_id(session_id)
             if not session:
-                AutoNomLogger.log_error(f"Session not found: {session_id}", "GET_SESSION_STATE")
+                ServiceLogger.log_error(f"Session not found: {session_id}", "GET_SESSION_STATE")
                 raise HTTPException(status_code=404, detail="Session not found")
             else:
-                AutoNomLogger.log_error(f"State key '{state_key}' not found in session {session_id}", "GET_SESSION_STATE")
+                ServiceLogger.log_error(f"State key '{state_key}' not found in session {session_id}", "GET_SESSION_STATE")
                 raise HTTPException(status_code=404, detail=f"State key '{state_key}' not found")
         
-        AutoNomLogger.log_info(f"Retrieved state value for key '{state_key}' from session {session_id}", "GET_SESSION_STATE")
+        ServiceLogger.log_info(f"Retrieved state value for key '{state_key}' from session {session_id}", "GET_SESSION_STATE")
         return {
             "session_id": session_id,
             "state_key": state_key,
@@ -247,7 +290,7 @@ async def get_session_state_value(session_id: str, state_key: str) -> dict[str, 
     except HTTPException:
         raise
     except Exception as e:
-        AutoNomLogger.log_error(f"Failed to get state value for session {session_id}: {str(e)}", "GET_SESSION_STATE")
+        ServiceLogger.log_error(f"Failed to get state value for session {session_id}: {str(e)}", "GET_SESSION_STATE")
         raise HTTPException(
             status_code=500, 
             detail=f"Failed to retrieve state value: {str(e)}"
@@ -261,7 +304,7 @@ async def get_user_sessions(user_id: str) -> dict[str, Any]:
     Returns all sessions (both active and completed) for the specified user.
     """
     try:
-        AutoNomLogger.api_called_panel(
+        ServiceLogger.api_called_panel(
             "GET",
             f"/api/users/{user_id}/sessions",
             params={"user_id": user_id}
@@ -270,7 +313,7 @@ async def get_user_sessions(user_id: str) -> dict[str, Any]:
         # Check if user exists
         user = db_manager.get_user(user_id=user_id)
         if not user:
-            AutoNomLogger.log_error(f"User not found: {user_id}", "GET_USER_SESSIONS")
+            ServiceLogger.log_error(f"User not found: {user_id}", "GET_USER_SESSIONS")
             raise HTTPException(status_code=404, detail="User not found")
         
         # Get all sessions for the user
@@ -288,7 +331,7 @@ async def get_user_sessions(user_id: str) -> dict[str, Any]:
                 "update_time": s.update_time.isoformat()
             })
         
-        AutoNomLogger.log_info(f"Retrieved {len(all_sessions)} sessions for user {user_id}", "GET_USER_SESSIONS")
+        ServiceLogger.log_info(f"Retrieved {len(all_sessions)} sessions for user {user_id}", "GET_USER_SESSIONS")
         return {
             "user_id": user_id,
             "sessions_count": len(all_sessions),
@@ -299,7 +342,7 @@ async def get_user_sessions(user_id: str) -> dict[str, Any]:
     except HTTPException:
         raise
     except Exception as e:
-        AutoNomLogger.log_error(f"Failed to get sessions for user {user_id}: {str(e)}", "GET_USER_SESSIONS")
+        ServiceLogger.log_error(f"Failed to get sessions for user {user_id}: {str(e)}", "GET_USER_SESSIONS")
         raise HTTPException(
             status_code=500, 
             detail=f"Failed to retrieve sessions: {str(e)}"
@@ -314,7 +357,7 @@ async def get_user_active_sessions(user_id: str) -> dict[str, Any]:
     Returns only the session IDs for active sessions.
     """
     try:
-        AutoNomLogger.api_called_panel(
+        ServiceLogger.api_called_panel(
             "GET",
             f"/api/users/{user_id}/active-sessions",
             params={"user_id": user_id}
@@ -323,7 +366,7 @@ async def get_user_active_sessions(user_id: str) -> dict[str, Any]:
         # Check if user exists
         user = db_manager.get_user(user_id=user_id)
         if not user:
-            AutoNomLogger.log_error(f"User not found: {user_id}", "GET_ACTIVE_SESSIONS")
+            ServiceLogger.log_error(f"User not found: {user_id}", "GET_ACTIVE_SESSIONS")
             raise HTTPException(status_code=404, detail="User not found")
         
         # Get active sessions for the user
@@ -336,7 +379,7 @@ async def get_user_active_sessions(user_id: str) -> dict[str, Any]:
             s: Any = session
             session_ids.append(s.id)
         
-        AutoNomLogger.log_info(f"Retrieved {len(active_sessions)} active sessions for user {user_id}", "GET_ACTIVE_SESSIONS")
+        ServiceLogger.log_info(f"Retrieved {len(active_sessions)} active sessions for user {user_id}", "GET_ACTIVE_SESSIONS")
         return {
             "user_id": user_id,
             "active_sessions_count": len(active_sessions),
@@ -347,7 +390,7 @@ async def get_user_active_sessions(user_id: str) -> dict[str, Any]:
     except HTTPException:
         raise
     except Exception as e:
-        AutoNomLogger.log_error(f"Failed to get active sessions for user {user_id}: {str(e)}", "GET_ACTIVE_SESSIONS")
+        ServiceLogger.log_error(f"Failed to get active sessions for user {user_id}: {str(e)}", "GET_ACTIVE_SESSIONS")
         raise HTTPException(
             status_code=500, 
             detail=f"Failed to retrieve active sessions: {str(e)}"
@@ -361,7 +404,7 @@ async def get_user_active_session_state(user_id: str, session_id: str) -> dict[s
     Returns the complete session state including workflow_status and other state data.
     """
     try:
-        AutoNomLogger.api_called_panel(
+        ServiceLogger.api_called_panel(
             "GET",
             f"/api/users/{user_id}/active-sessions/{session_id}/state",
             params={"user_id": user_id, "session_id": session_id}
@@ -370,21 +413,21 @@ async def get_user_active_session_state(user_id: str, session_id: str) -> dict[s
         # Check if user exists
         user = db_manager.get_user(user_id=user_id)
         if not user:
-            AutoNomLogger.log_error(f"User not found: {user_id}", "GET_ACTIVE_SESSION_STATE")
+            ServiceLogger.log_error(f"User not found: {user_id}", "GET_ACTIVE_SESSION_STATE")
             raise HTTPException(status_code=404, detail="User not found")
         
         # Get the specific session
         session = db_manager.get_session_by_id(session_id=session_id)
         if not session:
-            AutoNomLogger.log_error(f"Session not found: {session_id}", "GET_ACTIVE_SESSION_STATE")
+            ServiceLogger.log_error(f"Session not found: {session_id}", "GET_ACTIVE_SESSION_STATE")
             raise HTTPException(status_code=404, detail="Session not found")
         
         # Verify session belongs to the user
         if session.user_id != user_id:
-            AutoNomLogger.log_error(f"Session {session_id} does not belong to user {user_id}", "GET_ACTIVE_SESSION_STATE")
+            ServiceLogger.log_error(f"Session {session_id} does not belong to user {user_id}", "GET_ACTIVE_SESSION_STATE")
             raise HTTPException(status_code=403, detail="Session does not belong to user")
         
-        AutoNomLogger.log_info(f"Retrieved state for session {session_id} for user {user_id}", "GET_ACTIVE_SESSION_STATE")
+        ServiceLogger.log_info(f"Retrieved state for session {session_id} for user {user_id}", "GET_ACTIVE_SESSION_STATE")
         return {
             "user_id": user_id,
             "session_id": session_id,
@@ -397,7 +440,7 @@ async def get_user_active_session_state(user_id: str, session_id: str) -> dict[s
     except HTTPException:
         raise
     except Exception as e:
-        AutoNomLogger.log_error(f"Failed to get state for session {session_id}: {str(e)}", "GET_ACTIVE_SESSION_STATE")
+        ServiceLogger.log_error(f"Failed to get state for session {session_id}: {str(e)}", "GET_ACTIVE_SESSION_STATE")
         raise HTTPException(
             status_code=500, 
             detail=f"Failed to retrieve session state: {str(e)}"

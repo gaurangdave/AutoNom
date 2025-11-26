@@ -16,7 +16,7 @@ from rich import box
 
 from src.db import db_manager
 from src.schema.users import UserProfile
-from src.utils.logger import AutoNomLogger
+from utils.logger import ServiceLogger
 console = Console()
 
 
@@ -38,7 +38,7 @@ class AutoNom():
         }
         self.session_id = session_id if session_id else str(uuid.uuid4())
 
-        AutoNomLogger.log_info(
+        ServiceLogger.log_info(
             f"Initialized AutoNom for user {self.user.id}, with session : {self.session_id}")
         # private properties # database url
         self.__db_url = "sqlite:///./src/db/data/autonom.db"
@@ -148,10 +148,10 @@ class AutoNom():
         if existing_sessions:
             # session_id = existing_sessions.sessions[0].id
             # self.__session = existing_sessions.sessions[0]
-            AutoNomLogger.log_info(
+            ServiceLogger.log_info(
                 f"Loaded existing session:{self.session_id[:8]}...")
         else:
-            AutoNomLogger.log_info(
+            ServiceLogger.log_info(
                 f"Creating new session:{self.session_id[:8]}...")
 
             self.__session = await self.__session_service.create_session(
@@ -173,7 +173,7 @@ class AutoNom():
         )
 
         # TODO: Update this prompt to a improve the performance
-        AutoNomLogger.log_info(f"Starting session : {self.session_id}")
+        ServiceLogger.log_info(f"Starting session : {self.session_id}")
 
         # Step 3: Create a user query
         # user_input = f"Plan a {self.meal_type} for {self.user.name}"
@@ -198,7 +198,7 @@ class AutoNom():
 
             if response:
                 workflow_status = db_manager.get_session_state_val(self.session_id, "workflow_status")
-                AutoNomLogger.log_debug(f"Workflow Status in DB {workflow_status}")
+                ServiceLogger.log_debug(f"Workflow Status in DB {workflow_status}")
                 response["workflow_status"] = workflow_status
                 
             yield (response)

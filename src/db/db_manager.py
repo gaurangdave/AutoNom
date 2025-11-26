@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 from typing import Any, Optional, Dict, List
 from datetime import datetime
-from src.utils.logger import DatabaseLogger
+from utils.logger import ServiceLogger
 from src.schema.users import UserProfile, Session
 
 CURRENT_DIR = Path(__file__).parent
@@ -61,7 +61,13 @@ def init_db() -> None:
         );
         """)
         
-        DatabaseLogger.database_initialized(str(DB_PATH))
+        ServiceLogger.log_panel(
+            "💾 Database Setup",
+            "[green]Database initialized successfully[/green]",
+            "green",
+            location=str(DB_PATH),
+            tables="users, orders"
+        )
 
 # --- User Helpers ---
 
@@ -86,9 +92,9 @@ def upsert_user(user_profile: UserProfile) -> None:
                     user_profile.special_instructions
                 )
             )
-            DatabaseLogger.user_saved(user_profile.name, user_profile.id)
+            ServiceLogger.log_success(f"User '{user_profile.name}' (ID: {user_profile.id}) saved to database", "DB")
     except Exception as e:
-        DatabaseLogger.user_save_error(user_profile.name, str(e))
+        ServiceLogger.log_error(f"Database error saving user '{user_profile.name}'", "DB", error=e)
         raise
 
 
@@ -131,10 +137,10 @@ def get_all_users() -> List[UserProfile]:
                 )
                 users.append(user_profile)
             
-            DatabaseLogger.users_retrieved(len(users))
+            ServiceLogger.log_info(f"Retrieved {len(users)} users from database", "DB")
             return users
     except Exception as e:
-        DatabaseLogger.user_retrieval_error(str(e))
+        ServiceLogger.log_error("Database error retrieving users", "DB", error=e)
         raise
     
 def get_user(user_id: str) -> Optional[UserProfile]:
@@ -160,7 +166,7 @@ def get_user(user_id: str) -> Optional[UserProfile]:
                 return user_profile
             return None
     except Exception as e:
-        DatabaseLogger.user_retrieval_error(str(e))
+        ServiceLogger.log_error("Database error retrieving user", "DB", error=e)
         raise
 
 # --- Session Helpers ---
@@ -178,7 +184,7 @@ def create_session(app_name: str, user_id: str, session_id: str, state: Dict[str
                 "INSERT INTO sessions (app_name, user_id, id, state, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?)",
                 (app_name, user_id, session_id, json.dumps(state), current_time, current_time)
             )
-            DatabaseLogger.user_saved(f"Session {session_id[:8]}...", f"{app_name}:{user_id}")
+            ServiceLogger.log_success(f"Session {session_id[:8]}... saved to database", "DB")
             
             # Return the created session as a Session object
             return Session(
@@ -190,7 +196,7 @@ def create_session(app_name: str, user_id: str, session_id: str, state: Dict[str
                 update_time=current_time
             )
     except Exception as e:
-        DatabaseLogger.user_save_error(f"Session {session_id[:8]}...", str(e))
+        ServiceLogger.log_error(f"Database error saving session {session_id[:8]}...", "DB", error=e)
         raise
 
 
@@ -218,7 +224,7 @@ def update_session_state(app_name: str, user_id: str, session_id: str, state: Di
                 )
             return None
     except Exception as e:
-        DatabaseLogger.user_save_error(f"Update session {session_id[:8]}...", str(e))
+        ServiceLogger.log_error(f"Database error updating session {session_id[:8]}...", "DB", error=e)
         raise
 
 
@@ -248,7 +254,7 @@ def get_session(app_name: str, user_id: str, session_id: str) -> Optional[Sessio
                 )
             return None
     except Exception as e:
-        DatabaseLogger.user_retrieval_error(str(e))
+        ServiceLogger.log_error("Database error retrieving session", "DB", error=e)
         raise
 
 
@@ -279,7 +285,7 @@ def get_session_by_id(session_id: str) -> Optional[Session]:
                 )
             return None
     except Exception as e:
-        DatabaseLogger.user_retrieval_error(str(e))
+        ServiceLogger.log_error("Database error retrieving session", "DB", error=e)
         raise
 
 
@@ -311,7 +317,7 @@ def get_user_sessions(app_name: str, user_id: str) -> List[Session]:
                 sessions.append(session)
             return sessions
     except Exception as e:
-        DatabaseLogger.user_retrieval_error(str(e))
+        ServiceLogger.log_error("Database error retrieving users", "DB", error=e)
         raise
 
 
@@ -347,7 +353,7 @@ def get_active_user_sessions(app_name: str, user_id: str) -> List[Session]:
                     active_sessions.append(session)
             return active_sessions
     except Exception as e:
-        DatabaseLogger.user_retrieval_error(str(e))
+        ServiceLogger.log_error("Database error retrieving users", "DB", error=e)
         raise
 
 
@@ -369,7 +375,7 @@ def get_session_state_val(session_id: str, key: str) -> Optional[Any]:
                     return state.get(key)
             return None
     except Exception as e:
-        DatabaseLogger.user_retrieval_error(str(e))
+        ServiceLogger.log_error("Database error retrieving session state", "DB", error=e)
         raise
 
 
@@ -386,7 +392,7 @@ def delete_session(app_name: str, user_id: str, session_id: str) -> bool:
             )
             return cursor.rowcount > 0
     except Exception as e:
-        DatabaseLogger.user_save_error(f"Delete session {session_id[:8]}...", str(e))
+        ServiceLogger.log_error(f"Database error deleting session {session_id[:8]}...", "DB", error=e)
         raise
 
 
