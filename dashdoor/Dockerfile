@@ -9,5 +9,5 @@ RUN pip install fastapi uvicorn
 COPY . .
 
 # Run the server on port 8001 (to avoid conflict with 8000)
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
+# CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
 # Use an official Python runtime as a parent image

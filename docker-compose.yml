@@ -14,9 +14,9 @@ services:
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       # - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      # - DOORDASH_API_URL=http://mock-doordash:8001 (Uncomment when ready)
-    # depends_on:
-    #   - mock-doordash (Uncomment when ready)
+      - DOORDASH_API_URL=http://dashdoor:8001
+    depends_on:
+      - dashdoor 
 
   # Mock Service (Commented out for Phase 1)
   dashdoor:
@@ -25,3 +25,8 @@ services:
     container_name: doordash_service
     ports:
       - "8001:8001"
+    volumes:
+      # Syncs local code to container for hot reloading
+      - ./dashdoor:/app 
+    # Override the command to enable reloading
+    command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
