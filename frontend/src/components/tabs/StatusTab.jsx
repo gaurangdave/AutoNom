@@ -3,7 +3,7 @@ import { Info, PartyPopper } from 'lucide-react';
 import { useUser } from '../../hooks/useUser';
 import { useAutoNom } from '../../hooks/useAutoNom';
 import { useToast } from '../../hooks/useToast';
-import { WORKFLOW_STATUS } from '../../utils/constants';
+import { WORKFLOW_STATUS, getStatusDisplay } from '../../utils/constants';
 import { useStatusStore } from '../../stores/statusStore';
 import StatusCard from '../status/StatusCard';
 import SelectionModal from '../status/SelectionModal';
@@ -32,6 +32,8 @@ const StatusTab = () => {
     selectedSessionForChat,
     celebrationShownForSession,
     userFeedbackReceived,
+    currentSessionState,
+    currentWorkflowStatus,
     setSessionHistory,
     setStatusTitle,
     setStatusSubtitle,
@@ -43,6 +45,7 @@ const StatusTab = () => {
     setCelebrationShownForSession,
     setSelectedSessionForChat,
     setUserFeedbackReceived,
+    setCurrentSessionState,
     closeModal,
     markFeedbackReceived,
     resetForNewSession  } = useStatusStore();
@@ -51,6 +54,7 @@ const StatusTab = () => {
   const historyPollIntervalRef = useRef(null);
   const feedbackSubmittedTimeRef = useRef(null);
   const previousWorkflowStatusRef = useRef(null);
+  const sessionHistoryRef = useRef([]);
 
   // Fetch session history - only poll when there's no active session
   useEffect(() => {
@@ -66,6 +70,8 @@ const StatusTab = () => {
             new Date(b.create_time) - new Date(a.create_time)
           );
           setSessionHistory(sortedSessions);
+          // Sync ref with store
+          sessionHistoryRef.current = sortedSessions;
         }
       } catch (error) {
         console.error('[StatusTab] Error loading session history:', error);
@@ -202,18 +208,37 @@ const StatusTab = () => {
           const previousStatus = previousWorkflowStatusRef.current;
           console.log('[StatusTab] Workflow status:', workflowStatus, 'Previous:', previousStatus);
           
+          // Update Zustand store with session state
+          setCurrentSessionState(sessionState);
+          
+          // Update session history with latest session state using ref to avoid re-render loop
+          sessionHistoryRef.current = sessionHistoryRef.current || [];
+          const sessionIndex = sessionHistoryRef.current.findIndex(s => s.session_id === activeSessionId);
+          
+          if (sessionIndex >= 0) {
+            // Update existing session
+            sessionHistoryRef.current[sessionIndex] = sessionState;
+          } else {
+            // Add new session to history
+            sessionHistoryRef.current = [sessionState, ...sessionHistoryRef.current];
+          }
+          
+          // Update Zustand store with the updated history
+          setSessionHistory([...sessionHistoryRef.current]);
+          
+          // Get display info from helper function
+          const statusDisplay = getStatusDisplay(workflowStatus);
+          setStatusTitle(statusDisplay.title);
+          setStatusSubtitle(statusDisplay.subtitle);
+          setIsActive(statusDisplay.isActive);
+          
           // Check for state transition from MEAL_PLANNING_COMPLETE to AWAITING_USER_APPROVAL
           const isTransitionToApproval = 
             previousStatus === WORKFLOW_STATUS.MEAL_PLANNING_COMPLETE && 
             workflowStatus === WORKFLOW_STATUS.AWAITING_USER_APPROVAL;
           
-          // Update status based on workflow status from session state
+          // Show modal ONLY on edge trigger (state transition)
           if (workflowStatus === WORKFLOW_STATUS.AWAITING_USER_APPROVAL) {
-            setStatusTitle('Awaiting Your Approval');
-            setStatusSubtitle('The agent needs your input to continue');
-            setIsActive(true);
-            
-            // Show modal ONLY on edge trigger (state transition)
             const message = sessionState.state.meal_choice_verification_message;
             
             if (message && isTransitionToApproval && !showModal) {
@@ -230,10 +255,6 @@ const StatusTab = () => {
               }
             }
           } else if (workflowStatus === WORKFLOW_STATUS.ORDER_CONFIRMED) {
-            setStatusTitle('Order Confirmed! 🎉');
-            setStatusSubtitle('Your meal has been successfully ordered');
-            setIsActive(false);
-            
             // Show celebration popup with order confirmation message (only once per session)
             const message = sessionState.state.order_confirmation_message || 'Your meal order has been successfully placed!';
             if (celebrationShownForSession !== activeSessionId) {
@@ -253,22 +274,6 @@ const StatusTab = () => {
             
             // Clear active session so history polling can resume
             setActiveSessionId(null);
-          } else if (workflowStatus === WORKFLOW_STATUS.MEAL_PLANNING_COMPLETE) {
-            setStatusTitle('Meal Planning Complete');
-            setStatusSubtitle('Preparing options for your approval...');
-            setIsActive(true);
-          } else if (workflowStatus === WORKFLOW_STATUS.MEAL_PLANNING_STARTED) {
-            setStatusTitle('Planning Your Meal');
-            setStatusSubtitle('Finding the best options for you...');
-            setIsActive(true);
-          } else if (workflowStatus === WORKFLOW_STATUS.ORDER_EXECUTION_STARTED) {
-            setStatusTitle('Placing Your Order');
-            setStatusSubtitle('Executing the order...');
-            setIsActive(true);
-          } else if (workflowStatus === WORKFLOW_STATUS.STARTED) {
-            setStatusTitle('Workflow Started');
-            setStatusSubtitle('Processing your request...');
-            setIsActive(true);
           }
           
           // Update previous workflow status for next poll (edge trigger detection)
@@ -294,7 +299,7 @@ const StatusTab = () => {
         pollIntervalRef.current = null;
       }
     };
-  }, [activeSessionId, getCurrentUserId, fetchSessionState, showModal, celebrationShownForSession, setActiveSessionId, userFeedbackReceived, resetForNewSession, setStatusTitle, setStatusSubtitle, setIsActive, setModalMessage, setShowModal, setCelebrationMessage, setShowCelebration, setCelebrationShownForSession]);
+  }, [activeSessionId, getCurrentUserId, fetchSessionState, showModal, celebrationShownForSession, setActiveSessionId, userFeedbackReceived, resetForNewSession, setStatusTitle, setStatusSubtitle, setIsActive, setModalMessage, setShowModal, setCelebrationMessage, setShowCelebration, setCelebrationShownForSession, setCurrentSessionState, setSessionHistory]);
 
   const handleChatClick = (session) => {
     const message = session.state?.meal_choice_verification_message;
@@ -388,11 +393,12 @@ const StatusTab = () => {
         title={statusTitle}
         subtitle={statusSubtitle}
         isActive={isActive}
-        events={eventLog}
+        sessionState={currentSessionState}
+        workflowStatus={currentWorkflowStatus}
       />
 
       {/* Info Message */}
-      {eventLog.length === 0 && (
+      {!currentSessionState && (
         <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex items-start gap-3">
           <Info className="text-blue-400 mt-1" size={20} />
           <div className="text-sm text-blue-200">

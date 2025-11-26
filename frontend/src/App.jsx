@@ -49,7 +49,7 @@ function App() {
             {/* Tab Content */}
             <div className="fade-in">
               {activeTab === 'profile' && <ProfileTab />}
-              {activeTab === 'meals' && <MealsTab />}
+              {activeTab === 'meals' && <MealsTab setActiveTab={setActiveTab} />}
               {activeTab === 'status' && <StatusTab />}
             </div>
           </main>

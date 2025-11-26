@@ -6,6 +6,10 @@ export const useStatusStore = create((set, get) => ({
   statusSubtitle: 'Start a meal plan from the Meals tab',
   isActive: false,
   
+  // Current session state
+  currentSessionState: null,
+  currentWorkflowStatus: null,
+  
   // Modal state
   showModal: false,
   modalMessage: '',
@@ -26,6 +30,11 @@ export const useStatusStore = create((set, get) => ({
   setStatusTitle: (title) => set({ statusTitle: title }),
   setStatusSubtitle: (subtitle) => set({ statusSubtitle: subtitle }),
   setIsActive: (active) => set({ isActive: active }),
+  
+  setCurrentSessionState: (sessionState) => set({ 
+    currentSessionState: sessionState,
+    currentWorkflowStatus: sessionState?.state?.workflow_status || null
+  }),
   
   setShowModal: (show) => set({ showModal: show }),
   setModalMessage: (message) => set({ modalMessage: message }),
@@ -77,7 +86,9 @@ export const useStatusStore = create((set, get) => ({
   },
   
   resetForNewSession: () => set({
-    userFeedbackReceived: false
+    userFeedbackReceived: false,
+    currentSessionState: null,
+    currentWorkflowStatus: null
   }),
   
   updateStatus: (title, subtitle, active) => set({

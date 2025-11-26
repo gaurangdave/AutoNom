@@ -5,7 +5,7 @@ import { useAutoNom } from '../../hooks/useAutoNom';
 import { useToast } from '../../hooks/useToast';
 import MealRoutineCard from '../meals/MealRoutineCard';
 
-const MealsTab = () => {
+const MealsTab = ({ setActiveTab }) => {
   const { currentUser, getCurrentUserId, setActiveSessionId } = useUser();
   const { triggerPlan } = useAutoNom();
   const toast = useToast();
@@ -32,6 +32,9 @@ const MealsTab = () => {
           if (eventData.session_id) {
             console.log('[MealsTab] Setting active session ID:', eventData.session_id);
             setActiveSessionId(eventData.session_id);
+            // Switch to Status tab to see the workflow progress
+            console.log('[MealsTab] Switching to Status tab');
+            setActiveTab('status');
           }
         },
         (responseData) => {
@@ -40,6 +43,9 @@ const MealsTab = () => {
           if (responseData?.session_id) {
             console.log('[MealsTab] Setting active session ID from completion:', responseData.session_id);
             setActiveSessionId(responseData.session_id);
+            // Switch to Status tab to see the workflow progress
+            console.log('[MealsTab] Switching to Status tab');
+            setActiveTab('status');
           }
           setPlanningMeal(null);
         },
