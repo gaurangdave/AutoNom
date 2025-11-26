@@ -99,8 +99,8 @@ meal_choice_verifier = LlmAgent(
     ** Task **
     * IMPORTANT DO NOT share any IDs with the user.
     * IMPORTANT only give options from Meal Options.
-    * If there are multiple options from same restaurant, break it down into different choices.
-    * Important Number each choice for easier selection.
+    * IMPORTANT Each menu item SHOULD be a separate choice.
+    * IMPORTANT Number each choice for easier selection.
     * Format a nice friendly message to share the options to the user and save the message using the `update_meal_choice_verification_message` tool
     * Share the message with the user and wait for user response.
     * The user can either choose 1 or more option or can reject them all with some feedback. 

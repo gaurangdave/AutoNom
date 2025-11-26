@@ -4,6 +4,7 @@
 ## Agent Workflow Status
 * IDLE: Start of a fresh workflow
 * MEAL_PLANNING_STARTED: The meal_planner is running its research (gathering info + scouting).
+* MEAL_PLANNING_FAILED: The meal planner failed to generate the options because of downstream service failures
 * MEAL_PLANNING_COMPLETE: The meal_planner has completed its research and updated state with available options.
 * AWAITING_USER_APPROVAL: The workflow is paused. We have sent the 3 options to Telegram and are waiting for a reply.
 * USER_APPROVAL_RECEIVED: The user has approved a meal from 3 options.

@@ -17,7 +17,7 @@ class Restaurant(BaseModel):
 
 
 class Restaurants(BaseModel):
-    restaurants: List[Restaurant]
+    restaurants: List[Restaurant] = Field(default_factory=list)
 
 
 class OrderStatus(BaseModel):

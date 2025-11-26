@@ -15,6 +15,11 @@
     "action": "Delegate to meal_choice_verifier to format and verify these options from the user."
   },
   {
+    "status": "MEAL_PLANNING_FAILED",
+    "meaning": "Research is finished. The session does not contain a valid list of 3 meal options.",
+    "action": "STOP Execution. Inform the user that meal planning failed."
+  },
+  {
     "status": "AWAITING_USER_APPROVAL",
     "meaning": "Options have been sent to the user. The system is paused waiting for an external signal (webhook).",
     "action": "STOP execution. Do not proceed until a user reply updates the state. Delegate any user queries to meal_planner."
