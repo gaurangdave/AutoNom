@@ -19,6 +19,7 @@ const StatusTab = () => {
   } = useAutoNom();
 
   const pollIntervalRef = useRef(null);
+  const historyPollIntervalRef = useRef(null);
   const [statusTitle, setStatusTitle] = useState('No Active Session');
   const [statusSubtitle, setStatusSubtitle] = useState('Start a meal plan from the Meals tab');
   const [isActive, setIsActive] = useState(false);
@@ -30,7 +31,7 @@ const StatusTab = () => {
   const [selectedSessionForChat, setSelectedSessionForChat] = useState(null);
   const [celebrationShownForSession, setCelebrationShownForSession] = useState(null);
 
-  // Fetch session history on component mount and when activeSessionId changes
+  // Fetch session history - only poll when there's no active session
   useEffect(() => {
     const userId = getCurrentUserId();
     if (!userId) return;
@@ -50,12 +51,29 @@ const StatusTab = () => {
       }
     };
 
+    // Clear any existing history polling interval
+    if (historyPollIntervalRef.current) {
+      clearInterval(historyPollIntervalRef.current);
+      historyPollIntervalRef.current = null;
+    }
+
+    // Load history immediately
     loadSessionHistory();
     
-    // Refresh session history every 10 seconds
-    const historyInterval = setInterval(loadSessionHistory, 10000);
+    // Only poll session history if there's NO active session
+    if (!activeSessionId) {
+      console.log('[StatusTab] No active session, starting history polling');
+      historyPollIntervalRef.current = setInterval(loadSessionHistory, 10000);
+    } else {
+      console.log('[StatusTab] Active session exists, skipping history polling');
+    }
     
-    return () => clearInterval(historyInterval);
+    return () => {
+      if (historyPollIntervalRef.current) {
+        clearInterval(historyPollIntervalRef.current);
+        historyPollIntervalRef.current = null;
+      }
+    };
   }, [getCurrentUserId, fetchUserSessions, activeSessionId]);
 
   // Auto-set active session from history if not already set
@@ -125,7 +143,7 @@ const StatusTab = () => {
     
     console.log('[StatusTab] Session polling effect triggered:', { activeSessionId, userId });
     
-    // Clear any existing interval
+    // Clear any existing session state polling interval
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current);
       pollIntervalRef.current = null;
@@ -133,11 +151,18 @@ const StatusTab = () => {
     
     // If no valid session or no user, stop polling
     if (!activeSessionId || !userId) {
-      console.log('[StatusTab] No session or user, stopping polling');
+      console.log('[StatusTab] No session or user, stopping session state polling');
       return;
     }
 
     console.log('[StatusTab] Active session ID detected:', activeSessionId);
+    
+    // Stop history polling when we start session state polling
+    if (historyPollIntervalRef.current) {
+      console.log('[StatusTab] Stopping history polling to start session state polling');
+      clearInterval(historyPollIntervalRef.current);
+      historyPollIntervalRef.current = null;
+    }
 
     // Function to poll session state
     const pollSessionState = async () => {
@@ -178,11 +203,15 @@ const StatusTab = () => {
               setTimeout(() => setShowCelebration(false), 10000);
             }
             
-            // Stop polling once order is confirmed
+            // Stop session state polling once order is confirmed
+            console.log('[StatusTab] Order confirmed, stopping session state polling');
             if (pollIntervalRef.current) {
               clearInterval(pollIntervalRef.current);
               pollIntervalRef.current = null;
             }
+            
+            // Clear active session so history polling can resume
+            setActiveSessionId(null);
           } else if (workflowStatus === WORKFLOW_STATUS.MEAL_PLANNING_STARTED) {
             setStatusTitle('Planning Your Meal');
             setStatusSubtitle('Finding the best options for you...');
@@ -211,13 +240,13 @@ const StatusTab = () => {
 
     // Cleanup on unmount or when dependencies change
     return () => {
-      console.log('[StatusTab] Cleaning up polling interval');
+      console.log('[StatusTab] Cleaning up session state polling interval');
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
         pollIntervalRef.current = null;
       }
     };
-  }, [activeSessionId, getCurrentUserId, fetchSessionState, showModal, celebrationShownForSession]);
+  }, [activeSessionId, getCurrentUserId, fetchSessionState, showModal, celebrationShownForSession, setActiveSessionId]);
 
   const handleChatClick = (session) => {
     const message = session.state?.meal_choice_verification_message;
