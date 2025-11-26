@@ -11,6 +11,9 @@ COPY requirements.txt .
 # Added --no-cache-dir to keep image small
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy shared utils first (for logger and other shared utilities)
+COPY utils/ ./utils/
+
 # Copy the rest of the code
 COPY . .
 

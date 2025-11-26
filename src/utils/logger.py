@@ -11,169 +11,32 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional, Union
 from src.schema.users import UserProfile
 
+# Import from shared logger
+from utils.logger import ServiceLogger
+
 # Initialize Rich Console
 console = Console()
 
-class AutoNomLogger:
+class AutoNomLogger(ServiceLogger):
     """Logger class with rich formatting for Auto-Nom API operations."""
     
-    # --- GENERIC LOGGING METHODS ---
-    
-    @staticmethod
-    def log_debug(message: str, context: str | None = None, **kwargs: Any):
-        """Log debug information."""
-        if context:
-            console.print(f"[dim]🔍 [{context}] {message}[/dim]")
-        else:
-            console.print(f"[dim]🔍 {message}[/dim]")
-        
-        if kwargs:
-            for key, value in kwargs.items():
-                console.print(f"[dim]  └─ {key}: {value}[/dim]")
-    
-    @staticmethod
-    def log_info(message: str, context: str | None = None, **kwargs: Any):
-        """Log general information."""
-        if context:
-            console.print(f"[blue]ℹ️ [{context}] {message}[/blue]")
-        else:
-            console.print(f"[blue]ℹ️ {message}[/blue]")
-        
-        if kwargs:
-            for key, value in kwargs.items():
-                console.print(f"[blue]  └─ {key}: {value}[/blue]")
-    
-    @staticmethod
-    def log_success(message: str, context: str | None = None, **kwargs: Any):
-        """Log success messages."""
-        if context:
-            console.print(f"[green]✅ [{context}] {message}[/green]")
-        else:
-            console.print(f"[green]✅ {message}[/green]")
-        
-        if kwargs:
-            for key, value in kwargs.items():
-                console.print(f"[green]  └─ {key}: {value}[/green]")
-    
-    @staticmethod
-    def log_warning(message: str, context: str | None = None, **kwargs: Any):
-        """Log warning messages."""
-        if context:
-            console.print(f"[yellow]⚠️ [{context}] {message}[/yellow]")
-        else:
-            console.print(f"[yellow]⚠️ {message}[/yellow]")
-        
-        if kwargs:
-            for key, value in kwargs.items():
-                console.print(f"[yellow]  └─ {key}: {value}[/yellow]")
-    
-    @staticmethod
-    def log_error(message: str, context: str | None = None, error: Exception | None = None, **kwargs: Any):
-        """Log error messages."""
-        if context:
-            console.print(f"[red]❌ [{context}] {message}[/red]")
-        else:
-            console.print(f"[red]❌ {message}[/red]")
-        
-        if error:
-            console.print(f"[red]  └─ Error Details: {str(error)}[/red]")
-        
-        if kwargs:
-            for key, value in kwargs.items():
-                console.print(f"[red]  └─ {key}: {value}[/red]")
-    
-    @staticmethod
-    def log_panel(title: str, content: str, style: str = "blue", **kwargs: Any):
-        """Log a message in a panel format."""
-        panel_content = content
-        if kwargs:
-            panel_content += "\n" + "\n".join([f"[cyan]{key}:[/cyan] {value}" for key, value in kwargs.items()])
-        
-        console.print(Panel(
-            panel_content,
-            title=title,
-            border_style=style
-        ))
-    
-    @staticmethod
-    def log_table(title: str, headers: List[str], rows: List[List[str]], style: str = "minimal"):
-        """Log data in a table format."""
-        table = Table(title=title, box=getattr(box, style.upper(), box.MINIMAL))
-        
-        for header in headers:
-            table.add_column(header, style="cyan")
-        
-        for row in rows:
-            table.add_row(*[str(cell) for cell in row])
-        
-        console.print(table)
-    
-    @staticmethod
-    def log_api_request(method: str, endpoint: str, user_id: str | None = None, **kwargs: Any):
-        """Log API request information."""
-        request_info = f"[bold cyan]{method}[/bold cyan] {endpoint}"
-        if user_id:
-            request_info += f" [dim](User: {user_id})[/dim]"
-        
-        console.print(f"🌐 {request_info}")
-        
-        if kwargs:
-            for key, value in kwargs.items():
-                console.print(f"[cyan]  └─ {key}: {value}[/cyan]")
-    
-    @staticmethod
-    def log_api_response(status_code: int, message: str | None = None, duration: float | None = None, **kwargs: Any):
-        """Log API response information."""
-        if status_code >= 200 and status_code < 300:
-            color = "green"
-            icon = "✅"
-        elif status_code >= 400:
-            color = "red"
-            icon = "❌"
-        else:
-            color = "yellow"
-            icon = "⚠️"
-        
-        response_info = f"[{color}]{icon} Response: {status_code}[/{color}]"
-        if message:
-            response_info += f" - {message}"
-        if duration:
-            response_info += f" [dim]({duration:.2f}ms)[/dim]"
-        
-        console.print(response_info)
-        
-        if kwargs:
-            for key, value in kwargs.items():
-                console.print(f"[{color}]  └─ {key}: {value}[/{color}]")
-    
-    # --- SPECIALIZED LOGGING METHODS (Updated to use generic methods) ---
+    # --- AUTO-NOM SPECIFIC LOGGING METHODS ---
     
     @staticmethod
     def startup_message():
         """Display server startup message."""
-        AutoNomLogger.log_panel(
-            "🤖 Auto-Nom API Server",
-            "[bold magenta]Auto-Nom API Server[/bold magenta]",
-            "bright_blue"
-        )
+        ServiceLogger.startup_message("Auto-Nom API", port=8000)
         AutoNomLogger.log_success("Database initialized successfully")
-        AutoNomLogger.log_info("Server ready to accept requests", "🚀")
-        AutoNomLogger.log_info("API Documentation: http://localhost:8000/docs", "📍")
     
     @staticmethod
     def shutdown_message():
         """Display server shutdown message."""
-        AutoNomLogger.log_panel(
-            "👋 Auto-Nom API Server Shutting Down",
-            "[bold red]Auto-Nom API Server Shutting Down[/bold red]",
-            "red"
-        )
-        AutoNomLogger.log_warning("Cleanup completed", "🔄")
+        ServiceLogger.shutdown_message("Auto-Nom API")
     
     @staticmethod
     def health_check():
         """Log health check access."""
-        AutoNomLogger.log_debug("Health check endpoint accessed", "🔍")
+        ServiceLogger.log_debug("Health check endpoint accessed", "🔍")
     
     @staticmethod
     def fetching_users():

@@ -21,12 +21,15 @@ services:
   # Mock Service (Commented out for Phase 1)
   dashdoor:
     build: 
-      context: ./dashdoor
+      context: .
+      dockerfile: ./dashdoor/Dockerfile
     container_name: doordash_service
     ports:
       - "8001:8001"
     volumes:
       # Syncs local code to container for hot reloading
-      - ./dashdoor:/app 
+      - ./dashdoor:/app
+      # Mount shared utils directory
+      - ./utils:/app/utils
     # Override the command to enable reloading
     command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
