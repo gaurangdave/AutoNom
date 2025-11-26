@@ -1,32 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Send } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useToast } from '../../hooks/useToast';
 
 const SelectionModal = ({ isOpen, onClose, message, onSubmit }) => {
   const [response, setResponse] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const toast = useToast();
+
+  // Clear response when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setResponse('');
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!response.trim()) {
       toast.warning('Please enter a response');
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      await onSubmit(response);
-      setResponse('');
-      onClose();
-    } catch (error) {
-      console.error('Error submitting response:', error);
-      toast.error('Failed to submit response. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    // Call onSubmit synchronously - parent handles the rest
+    onSubmit(response);
+    setResponse('');
   };
 
   const handleKeyDown = (e) => {
@@ -84,23 +82,13 @@ const SelectionModal = ({ isOpen, onClose, message, onSubmit }) => {
                 placeholder="Type your response here..."
                 rows={2}
                 className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all placeholder-slate-500 resize-none"
-                disabled={isSubmitting}
               />
               <button
                 onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 self-end disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 self-end"
               >
-                {isSubmitting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                  </>
-                ) : (
-                  <>
-                    <span>Send</span>
-                    <Send size={16} />
-                  </>
-                )}
+                <span>Send</span>
+                <Send size={16} />
               </button>
             </div>
           </div>
