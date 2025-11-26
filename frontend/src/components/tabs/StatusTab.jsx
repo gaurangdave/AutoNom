@@ -3,12 +3,13 @@ import { Info, PartyPopper } from 'lucide-react';
 import { useUser } from '../../hooks/useUser';
 import { useAutoNom } from '../../hooks/useAutoNom';
 import { useToast } from '../../hooks/useToast';
+import { WORKFLOW_STATUS } from '../../utils/constants';
 import StatusCard from '../status/StatusCard';
 import SelectionModal from '../status/SelectionModal';
 import SessionHistory from '../status/SessionHistory';
 
 const StatusTab = () => {
-  const { getCurrentUserId, activeSessionId } = useUser();
+  const { getCurrentUserId, activeSessionId, setActiveSessionId } = useUser();
   const toast = useToast();
   const { 
     eventLog, 
@@ -27,6 +28,7 @@ const StatusTab = () => {
   const [celebrationMessage, setCelebrationMessage] = useState('');
   const [sessionHistory, setSessionHistory] = useState([]);
   const [selectedSessionForChat, setSelectedSessionForChat] = useState(null);
+  const [celebrationShownForSession, setCelebrationShownForSession] = useState(null);
 
   // Fetch session history on component mount and when activeSessionId changes
   useEffect(() => {
@@ -56,13 +58,28 @@ const StatusTab = () => {
     return () => clearInterval(historyInterval);
   }, [getCurrentUserId, fetchUserSessions, activeSessionId]);
 
+  // Auto-set active session from history if not already set
+  useEffect(() => {
+    if (!activeSessionId && sessionHistory.length > 0) {
+      // Find the latest session that's not ORDER_CONFIRMED
+      const latestActiveSession = sessionHistory.find(
+        session => session.state?.workflow_status !== WORKFLOW_STATUS.ORDER_CONFIRMED
+      );
+      
+      if (latestActiveSession) {
+        console.log('[StatusTab] Auto-setting active session from history:', latestActiveSession.session_id);
+        setActiveSessionId(latestActiveSession.session_id);
+      }
+    }
+  }, [activeSessionId, sessionHistory, setActiveSessionId]);
+
   // Monitor event log for state changes
   useEffect(() => {
     if (eventLog.length > 0) {
       const latestEvent = eventLog[eventLog.length - 1];
       
       // Update status based on workflow status
-      if (latestEvent.workflow_status === 'AWAITING_USER_APPROVAL' && latestEvent.text) {
+      if (latestEvent.workflow_status === WORKFLOW_STATUS.AWAITING_USER_APPROVAL && latestEvent.text) {
         setStatusTitle('Awaiting Your Approval');
         setStatusSubtitle('The agent needs your input to continue');
         setIsActive(true);
@@ -70,26 +87,27 @@ const StatusTab = () => {
         // Show modal for approval
         setModalMessage(latestEvent.text);
         setShowModal(true);
-      } else if (latestEvent.workflow_status === 'ORDER_CONFIRMED') {
+      } else if (latestEvent.workflow_status === WORKFLOW_STATUS.ORDER_CONFIRMED) {
         setStatusTitle('Order Confirmed! 🎉');
         setStatusSubtitle('Your meal has been successfully ordered');
         setIsActive(false);
         
-        // Show celebration
-        if (latestEvent.text) {
+        // Show celebration only once per session
+        if (latestEvent.text && latestEvent.session_id && celebrationShownForSession !== latestEvent.session_id) {
           setCelebrationMessage(latestEvent.text);
           setShowCelebration(true);
+          setCelebrationShownForSession(latestEvent.session_id);
           setTimeout(() => setShowCelebration(false), 10000);
         }
-      } else if (latestEvent.workflow_status === 'MEAL_PLANNING_STARTED') {
+      } else if (latestEvent.workflow_status === WORKFLOW_STATUS.MEAL_PLANNING_STARTED) {
         setStatusTitle('Planning Your Meal');
         setStatusSubtitle('Finding the best options for you...');
         setIsActive(true);
-      } else if (latestEvent.workflow_status === 'ORDER_EXECUTION_STARTED') {
+      } else if (latestEvent.workflow_status === WORKFLOW_STATUS.ORDER_EXECUTION_STARTED) {
         setStatusTitle('Placing Your Order');
         setStatusSubtitle('Executing the order...');
         setIsActive(true);
-      } else if (latestEvent.workflow_status === 'COMPLETED') {
+      } else if (latestEvent.workflow_status === WORKFLOW_STATUS.COMPLETED) {
         setStatusTitle('Session Completed');
         setStatusSubtitle('All done!');
         setIsActive(false);
@@ -99,7 +117,7 @@ const StatusTab = () => {
       setStatusSubtitle('Start a meal plan from the Meals tab');
       setIsActive(false);
     }
-  }, [eventLog]);
+  }, [eventLog, celebrationShownForSession]);
 
   // Poll for session state when activeSessionId changes
   useEffect(() => {
@@ -133,7 +151,7 @@ const StatusTab = () => {
           console.log('[StatusTab] Workflow status:', workflowStatus);
           
           // Update status based on workflow status from session state
-          if (workflowStatus === 'AWAITING_USER_APPROVAL') {
+          if (workflowStatus === WORKFLOW_STATUS.AWAITING_USER_APPROVAL) {
             setStatusTitle('Awaiting Your Approval');
             setStatusSubtitle('The agent needs your input to continue');
             setIsActive(true);
@@ -145,25 +163,35 @@ const StatusTab = () => {
               setModalMessage(message);
               setShowModal(true);
             }
-          } else if (workflowStatus === 'ORDER_CONFIRMED') {
+          } else if (workflowStatus === WORKFLOW_STATUS.ORDER_CONFIRMED) {
             setStatusTitle('Order Confirmed! 🎉');
             setStatusSubtitle('Your meal has been successfully ordered');
             setIsActive(false);
+            
+            // Show celebration popup with order confirmation message (only once per session)
+            const message = sessionState.state.order_confirmation_message || 'Your meal order has been successfully placed!';
+            if (celebrationShownForSession !== activeSessionId) {
+              console.log('[StatusTab] Showing celebration popup for session:', activeSessionId);
+              setCelebrationMessage(message);
+              setShowCelebration(true);
+              setCelebrationShownForSession(activeSessionId);
+              setTimeout(() => setShowCelebration(false), 10000);
+            }
             
             // Stop polling once order is confirmed
             if (pollIntervalRef.current) {
               clearInterval(pollIntervalRef.current);
               pollIntervalRef.current = null;
             }
-          } else if (workflowStatus === 'MEAL_PLANNING_STARTED') {
+          } else if (workflowStatus === WORKFLOW_STATUS.MEAL_PLANNING_STARTED) {
             setStatusTitle('Planning Your Meal');
             setStatusSubtitle('Finding the best options for you...');
             setIsActive(true);
-          } else if (workflowStatus === 'ORDER_EXECUTION_STARTED') {
+          } else if (workflowStatus === WORKFLOW_STATUS.ORDER_EXECUTION_STARTED) {
             setStatusTitle('Placing Your Order');
             setStatusSubtitle('Executing the order...');
             setIsActive(true);
-          } else if (workflowStatus === 'STARTED') {
+          } else if (workflowStatus === WORKFLOW_STATUS.STARTED) {
             setStatusTitle('Workflow Started');
             setStatusSubtitle('Processing your request...');
             setIsActive(true);
@@ -189,7 +217,7 @@ const StatusTab = () => {
         pollIntervalRef.current = null;
       }
     };
-  }, [activeSessionId, getCurrentUserId, fetchSessionState, showModal]);
+  }, [activeSessionId, getCurrentUserId, fetchSessionState, showModal, celebrationShownForSession]);
 
   const handleChatClick = (session) => {
     const message = session.state?.meal_choice_verification_message;
@@ -269,7 +297,7 @@ const StatusTab = () => {
       {/* Celebration Overlay */}
       {showCelebration && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-linear-to-br from-green-600 to-green-700 border border-green-500 rounded-2xl max-w-lg mx-4 p-8 text-center shadow-2xl transform celebration-bounce">
+          <div className="bg-gradient-to-br from-green-600 to-green-700 border border-green-500 rounded-2xl max-w-lg mx-4 p-8 text-center shadow-2xl transform celebration-bounce">
             <div className="mb-4">
               <PartyPopper className="mx-auto text-white" size={64} />
             </div>

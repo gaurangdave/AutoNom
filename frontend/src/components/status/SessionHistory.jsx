@@ -12,53 +12,54 @@ import {
   ChevronRight
 } from 'lucide-react';
 import PropTypes from 'prop-types';
+import { WORKFLOW_STATUS } from '../../utils/constants';
 
 // Status icon and color mapping
 const getStatusDisplay = (workflowStatus) => {
   const statusMap = {
-    'ORDER_CONFIRMED': {
+    [WORKFLOW_STATUS.ORDER_CONFIRMED]: {
       icon: CheckCircle,
       color: 'text-green-400',
       bgColor: 'bg-green-500/10',
       borderColor: 'border-green-500/20',
       label: 'Order Confirmed'
     },
-    'AWAITING_USER_APPROVAL': {
+    [WORKFLOW_STATUS.AWAITING_USER_APPROVAL]: {
       icon: AlertCircle,
       color: 'text-yellow-400',
       bgColor: 'bg-yellow-500/10',
       borderColor: 'border-yellow-500/20',
       label: 'Awaiting Approval'
     },
-    'MEAL_PLANNING_STARTED': {
+    [WORKFLOW_STATUS.MEAL_PLANNING_STARTED]: {
       icon: Clock,
       color: 'text-blue-400',
       bgColor: 'bg-blue-500/10',
       borderColor: 'border-blue-500/20',
       label: 'Planning Meal'
     },
-    'ORDER_EXECUTION_STARTED': {
+    [WORKFLOW_STATUS.ORDER_EXECUTION_STARTED]: {
       icon: PlayCircle,
       color: 'text-purple-400',
       bgColor: 'bg-purple-500/10',
       borderColor: 'border-purple-500/20',
       label: 'Placing Order'
     },
-    'STARTED': {
+    [WORKFLOW_STATUS.STARTED]: {
       icon: PlayCircle,
       color: 'text-blue-400',
       bgColor: 'bg-blue-500/10',
       borderColor: 'border-blue-500/20',
       label: 'Started'
     },
-    'COMPLETED': {
+    [WORKFLOW_STATUS.COMPLETED]: {
       icon: CheckCircle,
       color: 'text-green-400',
       bgColor: 'bg-green-500/10',
       borderColor: 'border-green-500/20',
       label: 'Completed'
     },
-    'ERROR': {
+    [WORKFLOW_STATUS.ERROR]: {
       icon: XCircle,
       color: 'text-red-400',
       bgColor: 'bg-red-500/10',
@@ -90,7 +91,7 @@ const SessionHistoryItem = ({ session, isActive, onChatClick }) => {
     minute: '2-digit'
   });
 
-  const showChatIcon = workflowStatus === 'AWAITING_USER_APPROVAL' && 
+  const showChatIcon = workflowStatus === WORKFLOW_STATUS.AWAITING_USER_APPROVAL && 
                        session.state?.meal_choice_verification_message;
 
   return (
