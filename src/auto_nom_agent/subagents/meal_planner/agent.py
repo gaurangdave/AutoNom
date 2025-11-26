@@ -26,10 +26,15 @@ from src.utils.state import is_valid_transition
 
 
 def get_restaurant_list_tool(tool_context: ToolContext) -> dict[str, Restaurants]:
-    """Gets the list of Restaurants that delivers food in the area.
+    """
+    [EXPENSIVE] Retrieves a FULL list of all restaurants.
+
+    ⚠️ WARNING: This returns a very large dataset. 
+    Only use this as a last resort if specific filters (cuisine, tags) yield no results.
+    Prefer `get_restaurants_by_cuisine` or `get_restaurants_by_tags` for efficiency.
 
     Returns:
-        Restaurants: List of type Restaurant
+        Restaurants: List of all available restaurants.
     """
     restaurant_list = get_restaurant_list()
     return {
@@ -38,10 +43,13 @@ def get_restaurant_list_tool(tool_context: ToolContext) -> dict[str, Restaurants
 
 
 def get_available_cuisines_list(tool_context: ToolContext) -> dict[str, Any]:
-    """Gets the list of available cuisines from restaurants in the area.
+    """
+    [DISCOVERY] Gets the list of unique cuisines available in the area.
+
+    Use this FIRST to understand what categories are available before searching.
 
     Returns:
-        dict[str, Any]: Dictionary containing list of cuisines
+        dict[str, Any]: List of cuisine strings (e.g., ["Italian", "Vegan", "Thai"]).
     """
     cuisines = get_cuisines()
     return {
@@ -50,13 +58,13 @@ def get_available_cuisines_list(tool_context: ToolContext) -> dict[str, Any]:
 
 
 def get_restaurant_detail_tool(tool_context: ToolContext, restaurant_id: str) -> dict[str, Any]:
-    """Gets detailed information for a specific restaurant.
+    """
+    Gets detailed metadata for a specific restaurant ID.
+
+    Use this after you have selected a candidate to verify details like rating or address.
 
     Args:
-        restaurant_id (str): The unique identifier for the restaurant
-
-    Returns:
-        dict[str, Any]: Dictionary containing restaurant details
+        restaurant_id (str): The unique ID (e.g., "r_101").
     """
     restaurant = get_restaurant_detail(restaurant_id)
     return {
@@ -65,23 +73,21 @@ def get_restaurant_detail_tool(tool_context: ToolContext, restaurant_id: str) ->
 
 
 def get_restaurants_by_cuisine_tool(tool_context: ToolContext, cuisine: str) -> dict[str, Any]:
-    """Gets restaurants filtered by cuisine type.
+    """
+    [EFFICIENT] Finds restaurants matching a specific cuisine.
+
+    This is the preferred method for finding candidates when the user has a general preference.
 
     Args:
-        cuisine (str): The cuisine type to filter by (e.g., "Italian", "Mexican")
-
-    Returns:
-        dict[str, Any]: Dictionary containing filtered restaurants
+        cuisine (str): The cuisine type (e.g., "Italian"). Case-insensitive.
     """
     result = get_restaurants_by_cuisine(cuisine)
     return result
 
 
 def get_tags_tool(tool_context: ToolContext) -> dict[str, Any]:
-    """Gets the list of available restaurant tags.
-
-    Returns:
-        dict[str, Any]: Dictionary containing list of tags
+    """
+    [DISCOVERY] Gets the list of available descriptive tags (e.g., 'Late Night', 'Cozy').
     """
     tags = get_tags()
     return {
@@ -90,36 +96,30 @@ def get_tags_tool(tool_context: ToolContext) -> dict[str, Any]:
 
 
 def get_restaurants_by_tags_tool(tool_context: ToolContext, tags: list[str]) -> dict[str, Any]:
-    """Gets restaurants filtered by tags.
+    """
+    [EFFICIENT] Finds restaurants that match ALL provided tags.
 
     Args:
-        tags (list[str]): List of tags to filter by (e.g., ["Fast Food", "Healthy"])
-
-    Returns:
-        dict[str, Any]: Dictionary containing filtered restaurants
+        tags (list[str]): List of tags. Example: ["Vegan", "Outdoor Seating"]
     """
     result = get_restaurants_by_tags(tags)
     return result
 
 
 def get_menu_items_tool(tool_context: ToolContext, restaurant_id: Optional[str] = None) -> dict[str, Any]:
-    """Gets menu items, optionally filtered by restaurant.
+    """
+    Retrieves the full menu. 
 
-    Args:
-        restaurant_id (str, optional): The restaurant ID to filter menu items
-
-    Returns:
-        dict[str, Any]: Dictionary containing menu items
+    If `restaurant_id` is provided, returns menu for that specific place.
+    If None, returns menus for ALL restaurants (Warning: Large output).
     """
     result = get_menu_items(restaurant_id)
     return result
 
 
 def get_dietary_tags_tool(tool_context: ToolContext) -> dict[str, Any]:
-    """Gets the list of available dietary tags from menu items.
-
-    Returns:
-        dict[str, Any]: Dictionary containing list of dietary tags
+    """
+    [DISCOVERY] Gets available dietary restrictions tags (e.g., 'Gluten-Free', 'Nut-Free').
     """
     dietary_tags = get_dietary_tags()
     return {
@@ -128,13 +128,13 @@ def get_dietary_tags_tool(tool_context: ToolContext) -> dict[str, Any]:
 
 
 def get_menu_items_by_dietary_tags_tool(tool_context: ToolContext, tags: list[str]) -> dict[str, Any]:
-    """Gets menu items filtered by dietary tags.
+    """
+    [SEARCH] Finds specific menu items across ALL restaurants that match dietary needs.
+
+    Use this to find specific DISHES for users with strict allergies or diets.
 
     Args:
-        tags (list[str]): List of dietary tags to filter by (e.g., ["Vegan", "Gluten-Free"])
-
-    Returns:
-        dict[str, Any]: Dictionary containing filtered menu items
+        tags (list[str]): Dietary tags. Example: ["Gluten-Free", "Vegan"]
     """
     result = get_menu_items_by_dietary_tags(tags)
     return result
@@ -143,49 +143,79 @@ def get_menu_items_by_dietary_tags_tool(tool_context: ToolContext, tags: list[st
 restaurant_scout_agent = LlmAgent(
     model=Gemini(model=model, retry_options=retry_options),
     name="restaurant_scout_agent",
-    description="Scans various restaurant options and generates choice of 3 options",
-    instruction="""
-    You are a creative and diligent restaurant scout. 
-    Your role is to find the restaurants and meal options for the user based on their feedback and preferences. 
+    description="Specialized researcher agent that queries external tools to find and select 3 optimal restaurant options based on specific user criteria.",
+ instruction="""
+    You are an expert Restaurant Scout Agent. Your goal is to research, filter, and select exactly 3 distinct meal options that best match the user's specific needs.
+
+    **CONTEXT:**
+    You are processing a request for a specific user. You must adhere to their dietary restrictions absolutely.
+    - **Dietary Preferences:** {user_dietary_preferences}
+    - **Allergies (CRITICAL):** {user_allergies}
+    - **History:** {meal_options} (Do not repeat recent suggestions if possible)
+    - **Recent Feedback:** {user_feedback} (Use this to adjust your search strategy)
+
+    **AVAILABLE TOOLS & USE CASES:**
+    You have access to the following tools. Use them strategically to narrow down options efficiently.
+
+    1. **`get_available_cuisines_list`**:
+       - *Use Case:* Call this FIRST to see what categories (Italian, Thai, Vegan, etc.) exist in the area.
     
-    ** User Preferences **
-    Dietary Preferences : 
-    {user_dietary_preferences}
-    
-    Allergies : 
-    {user_allergies}
-    
-    ** User Feedback **
-    Previously Shared Options:
-    {meal_options}
-    
-    Feedback on previous options:
-    {user_feedback}
-    
-    ** Task **
-    * Use the following tools finalize 3 restaurants based on `User Preferences` and `User Feedback` on previous suggestions.
-        * `get_restaurant_list_tool` tool to get the list of restaurants that deliver in users location.
-        * `get_available_cuisines_list` tool to get the list of available cuisines from restaurants in the area.
-        * `get_restaurant_detail_tool` tool to get detailed information for a specific restaurant.
-        * `get_restaurants_by_cuisine_tool` tool to get restaurants filtered by cuisine type.
-        * `get_tags_tool` tool to get list of available restaurant tags e.g.  "100% Vegan","Artisan","Authentic" etc.
-        * `get_restaurants_by_tags_tool` tool to get restaurants filtered by tags.
-        * `get_menu_items_tool` tool to get menu items filtered by restaurant.
-        * `get_dietary_tags_tool` tool to get list of available dietary tags e.g. "Gluten-Free","High-Protein","Spicy" etc.
-        * `get_menu_items_by_dietary_tags_tool` tool to get menu items filtered by dietary tags            
-    * IMPORTANT your response MUST be a valid JSON matching this structure
+    2. **`get_tags_tool`** / **`get_dietary_tags_tool`**:
+       - *Use Case:* Use these to discover specific descriptive tags (e.g., "Late Night", "Gluten-Free") to refine your search.
+
+    3. **`get_restaurants_by_cuisine_tool(cuisine)`**:
+       - *Use Case:* The primary search tool. Use this if the user's preferences or feedback imply a specific cuisine (e.g., "I want something spicy" -> search "Indian" or "Thai").
+
+    4. **`get_restaurants_by_tags_tool(tags)`**:
+       - *Use Case:* Use this for lifestyle constraints (e.g., ["Vegan", "Outdoor Seating"]).
+
+    5. **`get_menu_items_by_dietary_tags_tool(tags)`**:
+       - *Use Case:* Use this for strict dietary needs (e.g., ["Gluten-Free", "Nut-Free"]) to find safe dishes directly.
+
+    6. **`get_menu_items_tool(restaurant_id)`**:
+       - *Use Case:* Call this for a *specific* restaurant candidate to validate they have a meal that fits the user's budget and calorie goals.
+
+    7. **`get_restaurant_detail_tool(restaurant_id)`**:
+       - *Use Case:* Final verification of a restaurant's rating or details before adding it to your final list.
+
+    8. **`get_restaurant_list_tool`**:
+       - *Use Case:* [EXPENSIVE] Use only as a last resort if targeted searches fail. Returns a large, unfiltered list.
+
+    **EXECUTION ALGORITHM:**
+    Follow these steps in order. Do not skip steps.
+
+    1. **Broad Search:** - Start by identifying relevant cuisines or tags based on user preferences.
+       - Use the targeted search tools (Cuisine/Tags) to get a candidate list.
+
+    2. **Filter & Verify:**
+       - From your candidate list, select potential restaurants.
+       - Use `get_menu_items_tool` to ensure the restaurant serves a meal that strictly matches **Allergies** and **Dietary Preferences**.
+       - *Constraint:* Do not suggest a restaurant if you cannot find at least one compliant meal item.
+
+    3. **Selection:**
+       - Select exactly 3 distinct options. 
+       - Aim for variety (e.g., one salad, one warm meal, one "fun" option) unless the user requested something specific.
+
+    4. **Final Output:**
+       - You must return the result as a strictly formatted JSON object. 
+       - Do not include conversational filler before or after the JSON.
+
+    **OUTPUT SCHEMA:**
+    ```json
     {
-        "options":[
+        "options": [
             {
-                "id": "Restaurant ID goes here",
-                "name": "Restaurant Name goes here",
-                "description": "Restaurant description goes here",
-                "order": [{
-                    "id": "Menu item id goes here",
-                    "name": "Menu item name goes here",
-                    "price": "Menu item price goes here",
-                    "calories": "Menu item calories goes here"
-                }]
+                "id": "String (Restaurant ID)",
+                "name": "String (Restaurant Name)",
+                "description": "String (Short marketing summary of why this was chosen)",
+                "order": [
+                    {
+                        "id": "String (Menu Item ID)",
+                        "name": "String (Name of the specific dish)",
+                        "price": Number (Float),
+                        "calories": Number (Integer)
+                    }
+                ]
             }
         ]
     }
