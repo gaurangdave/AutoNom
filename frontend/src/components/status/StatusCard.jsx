@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { ChevronDown, Loader2 } from 'lucide-react';
-import EventStream from './EventStream';
+import ResponseStream from './ResponseStream';
+import { getWorkflowProgress } from '../../utils/constants';
 
-const StatusCard = ({ title, subtitle, isActive, events }) => {
+const StatusCard = ({ title, subtitle, isActive, sessionState, workflowStatus }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const toggleExpanded = () => {
     setIsExpanded(!isExpanded);
   };
+
+  const progress = getWorkflowProgress(workflowStatus);
 
   return (
     <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-2xl mb-8 shadow-xl relative overflow-hidden transition-all duration-300">
@@ -42,19 +45,25 @@ const StatusCard = ({ title, subtitle, isActive, events }) => {
         {!isExpanded && isActive && (
           <div className="mt-6 transition-opacity duration-300">
             <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-              <div className="h-full bg-primary-500 w-2/3 rounded-full relative animate-pulse"></div>
+              <div 
+                className="h-full bg-primary-500 rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
+            <div className="text-xs text-gray-400 mt-2 text-right">
+              {progress}% Complete
             </div>
           </div>
         )}
       </div>
 
-      {/* Event Stream (Expandable) */}
+      {/* Response Stream (Expandable) */}
       {isExpanded && (
         <div className="border-t border-slate-700 bg-slate-900/50 p-4 max-h-96 overflow-y-auto">
           <div className="text-xs text-slate-500 uppercase tracking-wider mb-2 font-bold">
-            Agent Event Stream
+            Session Details
           </div>
-          <EventStream events={events} />
+          <ResponseStream sessionState={sessionState} />
         </div>
       )}
     </div>

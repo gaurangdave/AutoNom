@@ -12,76 +12,97 @@ import {
   ChevronRight
 } from 'lucide-react';
 import PropTypes from 'prop-types';
-import { WORKFLOW_STATUS } from '../../utils/constants';
+import { WORKFLOW_STATUS, getStatusDisplay } from '../../utils/constants';
 
-// Status icon and color mapping
-const getStatusDisplay = (workflowStatus) => {
-  const statusMap = {
+// Visual display attributes for session history items
+const getStatusVisuals = (workflowStatus) => {
+  const visualMap = {
     [WORKFLOW_STATUS.ORDER_CONFIRMED]: {
       icon: CheckCircle,
       color: 'text-green-400',
       bgColor: 'bg-green-500/10',
-      borderColor: 'border-green-500/20',
-      label: 'Order Confirmed'
+      borderColor: 'border-green-500/20'
     },
     [WORKFLOW_STATUS.AWAITING_USER_APPROVAL]: {
       icon: AlertCircle,
       color: 'text-yellow-400',
       bgColor: 'bg-yellow-500/10',
-      borderColor: 'border-yellow-500/20',
-      label: 'Awaiting Approval'
+      borderColor: 'border-yellow-500/20'
     },
     [WORKFLOW_STATUS.MEAL_PLANNING_STARTED]: {
       icon: Clock,
       color: 'text-blue-400',
       bgColor: 'bg-blue-500/10',
-      borderColor: 'border-blue-500/20',
-      label: 'Planning Meal'
+      borderColor: 'border-blue-500/20'
+    },
+    [WORKFLOW_STATUS.MEAL_PLANNING_COMPLETE]: {
+      icon: CheckCircle,
+      color: 'text-blue-400',
+      bgColor: 'bg-blue-500/10',
+      borderColor: 'border-blue-500/20'
+    },
+    [WORKFLOW_STATUS.USER_APPROVAL_RECEIVED]: {
+      icon: CheckCircle,
+      color: 'text-green-400',
+      bgColor: 'bg-green-500/10',
+      borderColor: 'border-green-500/20'
+    },
+    [WORKFLOW_STATUS.USER_REJECTION_RECEIVED]: {
+      icon: XCircle,
+      color: 'text-orange-400',
+      bgColor: 'bg-orange-500/10',
+      borderColor: 'border-orange-500/20'
+    },
+    [WORKFLOW_STATUS.PLACING_ORDER]: {
+      icon: PlayCircle,
+      color: 'text-purple-400',
+      bgColor: 'bg-purple-500/10',
+      borderColor: 'border-purple-500/20'
     },
     [WORKFLOW_STATUS.ORDER_EXECUTION_STARTED]: {
       icon: PlayCircle,
       color: 'text-purple-400',
       bgColor: 'bg-purple-500/10',
-      borderColor: 'border-purple-500/20',
-      label: 'Placing Order'
+      borderColor: 'border-purple-500/20'
     },
     [WORKFLOW_STATUS.STARTED]: {
       icon: PlayCircle,
       color: 'text-blue-400',
       bgColor: 'bg-blue-500/10',
-      borderColor: 'border-blue-500/20',
-      label: 'Started'
+      borderColor: 'border-blue-500/20'
     },
     [WORKFLOW_STATUS.COMPLETED]: {
       icon: CheckCircle,
       color: 'text-green-400',
       bgColor: 'bg-green-500/10',
-      borderColor: 'border-green-500/20',
-      label: 'Completed'
+      borderColor: 'border-green-500/20'
     },
     [WORKFLOW_STATUS.ERROR]: {
       icon: XCircle,
       color: 'text-red-400',
       bgColor: 'bg-red-500/10',
-      borderColor: 'border-red-500/20',
-      label: 'Error'
+      borderColor: 'border-red-500/20'
     }
   };
 
-  return statusMap[workflowStatus] || {
+  return visualMap[workflowStatus] || {
     icon: Clock,
     color: 'text-gray-400',
     bgColor: 'bg-gray-500/10',
-    borderColor: 'border-gray-500/20',
-    label: workflowStatus || 'Unknown'
+    borderColor: 'border-gray-500/20'
   };
 };
 
 const SessionHistoryItem = ({ session, isActive, onChatClick }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const workflowStatus = session.state?.workflow_status;
-  const statusDisplay = getStatusDisplay(workflowStatus);
-  const StatusIcon = statusDisplay.icon;
+  
+  // Get status text from helper
+  const statusInfo = getStatusDisplay(workflowStatus);
+  
+  // Get visual attributes
+  const statusVisuals = getStatusVisuals(workflowStatus);
+  const StatusIcon = statusVisuals.icon;
   
   const mealType = session.state?.meal_type || 'Unknown Meal';
   const createTime = new Date(session.create_time).toLocaleString('en-US', {
@@ -95,11 +116,11 @@ const SessionHistoryItem = ({ session, isActive, onChatClick }) => {
                        session.state?.meal_choice_verification_message;
 
   return (
-    <div className={`border rounded-lg p-4 ${statusDisplay.borderColor} ${statusDisplay.bgColor} ${isActive ? 'ring-2 ring-blue-400' : ''}`}>
+    <div className={`border rounded-lg p-4 ${statusVisuals.borderColor} ${statusVisuals.bgColor} ${isActive ? 'ring-2 ring-blue-400' : ''}`}>
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-3 flex-1">
-          <StatusIcon className={`${statusDisplay.color} mt-1`} size={20} />
+          <StatusIcon className={`${statusVisuals.color} mt-1`} size={20} />
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
               <h4 className="font-semibold text-white">{mealType}</h4>
@@ -109,7 +130,7 @@ const SessionHistoryItem = ({ session, isActive, onChatClick }) => {
                 </span>
               )}
             </div>
-            <p className={`text-sm ${statusDisplay.color}`}>{statusDisplay.label}</p>
+            <p className={`text-sm ${statusVisuals.color}`}>{statusInfo.title}</p>
             <p className="text-xs text-gray-400 mt-1">{createTime}</p>
           </div>
         </div>
@@ -177,7 +198,10 @@ const SessionHistory = ({ sessions, currentSessionId, onChatClick }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  if (!sessions || sessions.length === 0) {
+  // Ensure sessions is always an array
+  const sessionsList = Array.isArray(sessions) ? sessions : [];
+
+  if (!sessionsList || sessionsList.length === 0) {
     return (
       <div className="bg-gray-800/30 border border-gray-700/50 rounded-xl p-6 text-center">
         <Clock className="mx-auto text-gray-500 mb-3" size={32} />
@@ -190,10 +214,10 @@ const SessionHistory = ({ sessions, currentSessionId, onChatClick }) => {
   }
 
   // Calculate pagination
-  const totalPages = Math.ceil(sessions.length / itemsPerPage);
+  const totalPages = Math.ceil(sessionsList.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentSessions = sessions.slice(startIndex, endIndex);
+  const currentSessions = sessionsList.slice(startIndex, endIndex);
 
   const handlePrevPage = () => {
     setCurrentPage(prev => Math.max(1, prev - 1));
@@ -208,7 +232,7 @@ const SessionHistory = ({ sessions, currentSessionId, onChatClick }) => {
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-lg font-semibold text-white">Session History</h3>
         <span className="text-sm text-gray-400">
-          {sessions.length} session{sessions.length !== 1 ? 's' : ''}
+          {sessionsList.length} session{sessionsList.length !== 1 ? 's' : ''}
         </span>
       </div>
 

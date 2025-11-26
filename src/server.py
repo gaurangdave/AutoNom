@@ -81,7 +81,7 @@ async def create_user(user: UserProfile) -> UserProfile:
 
 
 @app.post("/api/users/{user_id}/meals/{meal_type}/trigger", response_model=None)
-async def trigger_workflow(user_id: str, meal_type: str, streaming: bool = False):
+async def trigger_workflow(user_id: str, meal_type: str, streaming: bool = False) -> dict[str, Any] | StreamingResponse:
     try:
         AutoNomLogger.api_called_panel(
             "POST",
@@ -139,7 +139,7 @@ async def trigger_workflow(user_id: str, meal_type: str, streaming: bool = False
 
 
 @app.post("/api/sessions/{session_id}/resume", response_model=None)
-async def resume_workflow(session_id: str, req: ResumeRequest, streaming: bool = False):
+async def resume_workflow(session_id: str, req: ResumeRequest, streaming: bool = False) -> dict[str, Any] | StreamingResponse:
     """
     PHASE 2: Handle User Input & Finish.
     """
