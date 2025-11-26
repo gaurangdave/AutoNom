@@ -267,9 +267,9 @@ def on_after_meal_planner_agent_call(callback_context: CallbackContext) -> None:
 
     # verify if we have meal options
     meal_options = callback_context.state["meal_options"]
-    options = meal_options.get("options", [])
+    # options = meal_options.get("options", [])
 
-    if len(options) == 0:
+    if meal_options and len(meal_options) == 0:
         new_state = "MEAL_PLANNING_FAILED"
 
     if is_valid_transition(current_state, new_state):
