@@ -48,6 +48,7 @@ export const SessionProvider = ({ children }) => {
 
     const loadSessionHistory = async () => {
       try {
+        logger.log('Loading session history for user:', userId);
         const data = await fetchUserSessions(userId);
         if (data && data.sessions) {
           // Sort sessions by create_time, newest first
@@ -57,6 +58,19 @@ export const SessionProvider = ({ children }) => {
           setSessionHistory(sortedSessions);
           // Sync ref with store
           sessionHistoryRef.current = sortedSessions;
+          
+          // Auto-set active session if none is currently set
+          if (!activeSessionId) {
+            // Find the latest session that's not ORDER_CONFIRMED
+            const latestActiveSession = sortedSessions.find(
+              session => getWorkflowStatus(session) !== WORKFLOW_STATUS.ORDER_CONFIRMED
+            );
+            
+            if (latestActiveSession) {
+              logger.log('Auto-setting active session from history:', latestActiveSession.session_id);
+              setActiveSessionId(latestActiveSession.session_id);
+            }
+          }
         }
       } catch (error) {
         logger.error('Error loading session history:', error);
@@ -86,24 +100,7 @@ export const SessionProvider = ({ children }) => {
         historyPollIntervalRef.current = null;
       }
     };
-  }, [getCurrentUserId, fetchUserSessions, activeSessionId, setSessionHistory]);
-
-  // Auto-set active session from history if not already set
-  useEffect(() => {
-    const sessionHistory = useStatusStore.getState().sessionHistory;
-    
-    if (!activeSessionId && sessionHistory.length > 0) {
-      // Find the latest session that's not ORDER_CONFIRMED
-      const latestActiveSession = sessionHistory.find(
-        session => getWorkflowStatus(session) !== WORKFLOW_STATUS.ORDER_CONFIRMED
-      );
-      
-      if (latestActiveSession) {
-        logger.log('Auto-setting active session from history:', latestActiveSession.session_id);
-        setActiveSessionId(latestActiveSession.session_id);
-      }
-    }
-  }, [activeSessionId, setActiveSessionId]);
+  }, [getCurrentUserId, fetchUserSessions, activeSessionId, setSessionHistory, setActiveSessionId]);
 
   // Poll for session state when activeSessionId changes
   useEffect(() => {
