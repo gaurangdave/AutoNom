@@ -1,18 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X, Send } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useToast } from '../../hooks/useToast';
+import MealChoiceCard from './MealChoiceCard';
 
-const SelectionModal = ({ isOpen, onClose, message, onSubmit }) => {
+const SelectionModal = ({ isOpen, onClose, message, mealChoices = [], onSubmit }) => {
   const [response, setResponse] = useState('');
   const toast = useToast();
-
-  // Clear response when modal closes
-  useEffect(() => {
-    if (!isOpen) {
-      setResponse('');
-    }
-  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -57,17 +51,31 @@ const SelectionModal = ({ isOpen, onClose, message, onSubmit }) => {
 
         {/* Message Content */}
         <div className="flex-1 p-6 overflow-y-auto">
-          <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
-            <div className="text-sm text-slate-400 mb-2 flex items-center gap-2">
-              <span>🤖</span>
-              <span>Agent Message</span>
+          {message && (
+            <div className="bg-slate-900 rounded-lg p-4 border border-slate-700 mb-4">
+              <div className="text-sm text-slate-400 mb-2 flex items-center gap-2">
+                <span>🤖</span>
+                <span>Agent Message</span>
+              </div>
+              <div className="prose prose-sm prose-invert max-w-none">
+                <ReactMarkdown>
+                  {message}
+                </ReactMarkdown>
+              </div>
             </div>
-            <div className="prose prose-sm prose-invert max-w-none">
-              <ReactMarkdown>
-                {message}
-              </ReactMarkdown>
+          )}
+          
+          {mealChoices && mealChoices.length > 0 && (
+            <div className="space-y-3">
+              <div className="text-sm text-slate-400 font-medium flex items-center gap-2">
+                <span>🍽️</span>
+                <span>Your Meal Options ({mealChoices.length})</span>
+              </div>
+              {mealChoices.map((choice, index) => (
+                <MealChoiceCard key={choice.id || index} choice={choice} index={index} />
+              ))}
             </div>
-          </div>
+          )}
         </div>
 
         {/* Input Area */}

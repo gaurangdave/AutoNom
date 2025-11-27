@@ -13,6 +13,7 @@ export const useStatusStore = create((set, get) => ({
   // Modal state
   showModal: false,
   modalMessage: '',
+  modalMealChoices: [],
   
   // Celebration state
   showCelebration: false,
@@ -38,6 +39,7 @@ export const useStatusStore = create((set, get) => ({
   
   setShowModal: (show) => set({ showModal: show }),
   setModalMessage: (message) => set({ modalMessage: message }),
+  setModalMealChoices: (choices) => set({ modalMealChoices: choices }),
   
   setShowCelebration: (show) => set({ showCelebration: show }),
   setCelebrationMessage: (message) => set({ celebrationMessage: message }),
@@ -59,13 +61,15 @@ export const useStatusStore = create((set, get) => ({
   
   closeModal: () => set({
     showModal: false,
-    selectedSessionForChat: null
+    selectedSessionForChat: null,
+    modalMealChoices: []
   }),
   
   markFeedbackReceived: (message) => set({
     userFeedbackReceived: true,
     showModal: false,
     selectedSessionForChat: null,
+    modalMealChoices: [],
     statusTitle: 'Processing Your Response',
     statusSubtitle: 'The agent is continuing with your selection...',
     isActive: true

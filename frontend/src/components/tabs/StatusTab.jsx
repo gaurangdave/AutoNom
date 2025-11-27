@@ -26,6 +26,7 @@ const StatusTab = () => {
     isActive,
     showModal,
     modalMessage,
+    modalMealChoices,
     showCelebration,
     celebrationMessage,
     sessionHistory,
@@ -39,6 +40,7 @@ const StatusTab = () => {
     setStatusSubtitle,
     setIsActive,
     setModalMessage,
+    setModalMealChoices,
     setShowModal,
     setShowCelebration,
     setCelebrationMessage,
@@ -240,11 +242,13 @@ const StatusTab = () => {
           // Show modal ONLY on edge trigger (state transition)
           if (workflowStatus === WORKFLOW_STATUS.AWAITING_USER_APPROVAL) {
             const message = sessionState.state.meal_choice_verification_message;
+            const mealChoices = sessionState.state.meal_choices || [];
             
             if (message && isTransitionToApproval && !showModal) {
               console.log('[StatusTab] Edge trigger detected: MEAL_PLANNING_COMPLETE -> AWAITING_USER_APPROVAL');
-              console.log('[StatusTab] Showing approval modal with message');
+              console.log('[StatusTab] Showing approval modal with message and meal choices');
               setModalMessage(message);
+              setModalMealChoices(mealChoices);
               setShowModal(true);
               
               // Stop polling while modal is open
@@ -299,13 +303,15 @@ const StatusTab = () => {
         pollIntervalRef.current = null;
       }
     };
-  }, [activeSessionId, getCurrentUserId, fetchSessionState, showModal, celebrationShownForSession, setActiveSessionId, userFeedbackReceived, resetForNewSession, setStatusTitle, setStatusSubtitle, setIsActive, setModalMessage, setShowModal, setCelebrationMessage, setShowCelebration, setCelebrationShownForSession, setCurrentSessionState, setSessionHistory]);
+  }, [activeSessionId, getCurrentUserId, fetchSessionState, showModal, celebrationShownForSession, setActiveSessionId, userFeedbackReceived, resetForNewSession, setStatusTitle, setStatusSubtitle, setIsActive, setModalMessage, setModalMealChoices, setShowModal, setCelebrationMessage, setShowCelebration, setCelebrationShownForSession, setCurrentSessionState, setSessionHistory]);
 
   const handleChatClick = (session) => {
     const message = session.state?.meal_choice_verification_message;
+    const mealChoices = session.state?.meal_choices || [];
     if (message) {
       setSelectedSessionForChat(session);
       setModalMessage(message);
+      setModalMealChoices(mealChoices);
       setShowModal(true);
     }
   };
@@ -419,13 +425,14 @@ const StatusTab = () => {
         isOpen={showModal}
         onClose={handleModalClose}
         message={modalMessage}
+        mealChoices={modalMealChoices}
         onSubmit={handleModalSubmit}
       />
 
       {/* Celebration Overlay */}
       {showCelebration && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gradient-to-br from-green-600 to-green-700 border border-green-500 rounded-2xl max-w-lg mx-4 p-8 text-center shadow-2xl transform celebration-bounce">
+          <div className="bg-linear-to-br from-green-600 to-green-700 border border-green-500 rounded-2xl max-w-lg mx-4 p-8 text-center shadow-2xl transform celebration-bounce">
             <div className="mb-4">
               <PartyPopper className="mx-auto text-white" size={64} />
             </div>
