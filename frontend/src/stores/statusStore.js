@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { getWorkflowStatus } from '../utils/sessionAccessors';
 
 export const useStatusStore = create((set, get) => ({
   // Status display
@@ -34,7 +35,7 @@ export const useStatusStore = create((set, get) => ({
   
   setCurrentSessionState: (sessionState) => set({ 
     currentSessionState: sessionState,
-    currentWorkflowStatus: sessionState?.state?.workflow_status || null
+    currentWorkflowStatus: getWorkflowStatus(sessionState)
   }),
   
   setShowModal: (show) => set({ showModal: show }),

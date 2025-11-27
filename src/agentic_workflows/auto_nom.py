@@ -40,11 +40,11 @@ class AutoNom():
                 "user_feedback": "",
                 "user_choice": []
             },
-            "retries":{
-                "meal_planner": 0,
-                "meal_choice_verifier": 0,
-                "meal_order_executor": 0
-            }
+            # "retries":{
+            #     "meal_planner": 0,
+            #     "meal_choice_verifier": 0,
+            #     "meal_order_executor": 0
+            # }
         }
         self.session_id = session_id if session_id else str(uuid.uuid4())
 
@@ -210,8 +210,6 @@ class AutoNom():
             if response:
                 workflow_status = db_manager.get_session_state_val(
                     self.session_id, "workflow_status")
-                ServiceLogger.log_debug(
-                    f"Workflow Status in DB {workflow_status}")
                 response["workflow_status"] = workflow_status
 
             yield (response)

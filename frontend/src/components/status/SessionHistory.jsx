@@ -13,6 +13,16 @@ import {
 } from 'lucide-react';
 import PropTypes from 'prop-types';
 import { WORKFLOW_STATUS, getStatusDisplay } from '../../utils/constants';
+import {
+  getWorkflowStatus,
+  getMealType,
+  hasUserChoice,
+  getUserChoice,
+  getOrderConfirmationMessage,
+  getOrderConfirmation,
+  shouldShowChatIcon,
+  getFormattedCreateTime
+} from '../../utils/sessionAccessors';
 
 // Visual display attributes for session history items
 const getStatusVisuals = (workflowStatus) => {
@@ -95,7 +105,7 @@ const getStatusVisuals = (workflowStatus) => {
 
 const SessionHistoryItem = ({ session, isActive, onChatClick }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const workflowStatus = session.state?.workflow_status;
+  const workflowStatus = getWorkflowStatus(session);
   
   // Get status text from helper
   const statusInfo = getStatusDisplay(workflowStatus);
@@ -104,16 +114,10 @@ const SessionHistoryItem = ({ session, isActive, onChatClick }) => {
   const statusVisuals = getStatusVisuals(workflowStatus);
   const StatusIcon = statusVisuals.icon;
   
-  const mealType = session.state?.meal_type || 'Unknown Meal';
-  const createTime = new Date(session.create_time).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  const mealType = getMealType(session);
+  const createTime = getFormattedCreateTime(session);
 
-  const showChatIcon = workflowStatus === WORKFLOW_STATUS.AWAITING_USER_APPROVAL && 
-                       session.state?.meal_choice_verification_message;
+  const showChatIcon = shouldShowChatIcon(session);
 
   return (
     <div className={`border rounded-lg p-4 ${statusVisuals.borderColor} ${statusVisuals.bgColor} ${isActive ? 'ring-2 ring-blue-400' : ''}`}>
@@ -167,18 +171,22 @@ const SessionHistoryItem = ({ session, isActive, onChatClick }) => {
               <span className="text-gray-400">Session ID:</span>
               <span className="text-white ml-2 font-mono text-xs">{session.session_id}</span>
             </div>
-            {session.state?.user_choice && session.state.user_choice.length > 0 && (
+            {hasUserChoice(session) && (
               <div>
                 <span className="text-gray-400">User Choice:</span>
-                <span className="text-white ml-2">{session.state.user_choice.join(', ')}</span>
+                <span className="text-white ml-2">{getUserChoice(session).join(', ')}</span>
               </div>
             )}
-            {session.state?.order_confirmation_message && (
+            {getOrderConfirmationMessage(session) && (
+              <div>
+                {getOrderConfirmationMessage(session) && (
               <div>
                 <span className="text-gray-400">Order Details:</span>
                 <p className="text-white mt-1 text-xs leading-relaxed">
-                  {session.state.order_confirmation_message}
+                  {getOrderConfirmation(session)}
                 </p>
+              </div>
+            )}
               </div>
             )}
           </div>

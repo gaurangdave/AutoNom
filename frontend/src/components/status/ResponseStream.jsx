@@ -25,10 +25,10 @@ const ResponseStream = ({ sessionState }) => {
   });
 
   // Add meal type if available
-  if (state.meal_type) {
+  if (state.planning.meal_type) {
     responses.push({
       status: 'Meal Type',
-      meaning: state.meal_type,
+      meaning: state.planning.meal_type,
       isComplete: true
     });
   }
@@ -43,10 +43,10 @@ const ResponseStream = ({ sessionState }) => {
   }
 
   // Add verification message if available
-  if (state.meal_choice_verification_message) {
+  if (state?.planning?.meal_choice_verification_message) {
     responses.push({
       status: 'Awaiting User Approval',
-      meaning: state.meal_choice_verification_message.substring(0, 100) + (state.meal_choice_verification_message.length > 100 ? '...' : ''),
+      meaning: state.planning.meal_choice_verification_message.substring(0, 100) + (state.planning.meal_choice_verification_message.length > 100 ? '...' : ''),
       isComplete: workflowStatus !== WORKFLOW_STATUS.AWAITING_USER_APPROVAL
     });
   }
@@ -61,10 +61,10 @@ const ResponseStream = ({ sessionState }) => {
   }
 
   // Add order confirmation if available
-  if (state.order_confirmation_message) {
+  if (state?.order?.confirmation) {
     responses.push({
       status: 'Order Confirmed',
-      meaning: state.order_confirmation_message.substring(0, 100) + (state.order_confirmation_message.length > 100 ? '...' : ''),
+      meaning: state.order.confirmation.substring(0, 100) + (state.order.confirmation.length > 100 ? '...' : ''),
       isComplete: true
     });
   }

@@ -396,5 +396,21 @@ def delete_session(app_name: str, user_id: str, session_id: str) -> bool:
         raise
 
 
+def delete_all_sessions() -> int:
+    """
+    Deletes all sessions from the sessions table.
+    Returns the number of sessions deleted.
+    """
+    try:
+        with get_connection() as conn:
+            cursor = conn.execute("DELETE FROM sessions")
+            deleted_count = cursor.rowcount
+            ServiceLogger.log_success(f"Deleted {deleted_count} sessions from database", "DB")
+            return deleted_count
+    except Exception as e:
+        ServiceLogger.log_error("Database error deleting all sessions", "DB", error=e)
+        raise
+
+
 if __name__ == "__main__":
     init_db()

@@ -447,5 +447,44 @@ async def get_user_active_session_state(user_id: str, session_id: str) -> dict[s
         )
 
 
+@app.delete("/api/sessions")
+async def delete_all_sessions() -> dict[str, Any]:
+    """
+    Delete all sessions from the database.
+    Returns the number of sessions deleted.
+    """
+    try:
+        ServiceLogger.api_called_panel(
+            "DELETE",
+            "/api/sessions",
+            params={}
+        )
+        
+        ServiceLogger.log_panel(
+            "🗑️ Delete All Sessions",
+            "[bold red]Deleting all sessions from database[/bold red]",
+            "red"
+        )
+        
+        # Delete all sessions
+        deleted_count = db_manager.delete_all_sessions()
+        
+        ServiceLogger.log_success(f"Successfully deleted {deleted_count} sessions", "DELETE_SESSIONS")
+        return {
+            "deleted_count": deleted_count,
+            "message": f"Successfully deleted {deleted_count} sessions",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        ServiceLogger.log_error(f"Failed to delete all sessions: {str(e)}", "DELETE_SESSIONS")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Failed to delete all sessions: {str(e)}"
+        )
+
+
+
+
 # catch all route everything to frontend
 app.mount("/", StaticFiles(directory="./src/static", html=True), name="static")
