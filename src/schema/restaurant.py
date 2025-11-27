@@ -24,7 +24,7 @@ class OrderStatus(BaseModel):
     id: str = Field(description="ID for the order")
     restaurant_id: str = Field(
         description="ID for the restaurant from where the order was placed")
-    total_bill: float = Field(description="total bill amount for the order")
+    # total_bill: float = Field(description="total bill amount for the order")
     status: str = Field(description="Current status for the order")
 
 

@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import PropTypes from 'prop-types';
 import { useToast } from '../../hooks/useToast';
 import { CARD_STYLES, INPUT_STYLES, BUTTON_STYLES } from '../../utils/styleClasses';
+import { MODAL_SIZES, MODAL_HEIGHTS, BUTTON_LABELS, ICON_SIZES, PLACEHOLDERS, FORM_CONFIG } from '../../utils/uiConstants';
 import MealChoiceCard from './MealChoiceCard';
 
 const SelectionModal = ({ isOpen, onClose, message, mealChoices = [], onSubmit }) => {

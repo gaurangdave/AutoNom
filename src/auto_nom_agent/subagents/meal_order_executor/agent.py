@@ -45,7 +45,6 @@ def place_food_order(food_order: FoodOrder, tool_context: ToolContext) -> dict[s
     order_status = OrderStatus(
         id=str(uuid.uuid4()),
         restaurant_id=food_order.id,
-        total_bill=120.32,
         status="ORDER_PLACED",
     )
 
@@ -81,6 +80,7 @@ def update_order_state(order_status: OrderStatus, tool_context: ToolContext) -> 
         "message": f"order state updated with order id : {order_status.id}"
     }
 
+
 def update_order_confirmation_message(order_confirmation_message: dict[str, Any], tool_context: ToolContext) -> dict[str, str]:
     """Updates order state list with latest order status
 
@@ -100,6 +100,7 @@ def update_order_confirmation_message(order_confirmation_message: dict[str, Any]
         "message": f"state updated with order confirmation message"
     }
 
+
 def on_before_meal_order_executor_agent_call(callback_context: CallbackContext) -> None:
     current_state = callback_context.state["workflow_status"]
     new_state = "PLACING_ORDER"
@@ -108,6 +109,7 @@ def on_before_meal_order_executor_agent_call(callback_context: CallbackContext) 
         callback_context.state["workflow_status"] = new_state
 
     return None
+
 
 def on_after_meal_order_executor_agent_call(callback_context: CallbackContext) -> None:
     current_state = callback_context.state["workflow_status"]

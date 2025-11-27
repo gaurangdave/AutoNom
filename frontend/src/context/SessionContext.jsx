@@ -8,7 +8,7 @@ import {
   getWorkflowStatus,
   getMealChoiceVerificationMessage,
   getMealChoices,
-  getOrderConfirmation
+  getOrderConfirmationData
 } from '../utils/sessionAccessors';
 
 const logger = createLogger('SessionProvider');
@@ -194,11 +194,11 @@ export const SessionProvider = ({ children }) => {
               }
             }
           } else if (workflowStatus === WORKFLOW_STATUS.ORDER_CONFIRMED) {
-            // Show celebration popup with order confirmation message (only once per session)
-            const message = getOrderConfirmation(sessionState) || 'Your meal order has been successfully placed!';
+            // Show celebration popup with order confirmation data (only once per session)
+            const orderData = getOrderConfirmationData(sessionState);
             if (celebrationShownForSession !== activeSessionId) {
               logger.log('Showing celebration popup for session:', activeSessionId);
-              setCelebrationMessage(message);
+              setCelebrationMessage(orderData);
               setShowCelebration(true);
               setCelebrationShownForSession(activeSessionId);
               setTimeout(() => setShowCelebration(false), POLLING_INTERVALS.CELEBRATION_DISPLAY);
@@ -292,9 +292,9 @@ export const SessionProvider = ({ children }) => {
               }
               
               if (workflowStatus === WORKFLOW_STATUS.ORDER_CONFIRMED) {
-                const message = getOrderConfirmation(sessionState) || 'Your meal order has been successfully placed!';
+                const orderData = getOrderConfirmationData(sessionState);
                 if (celebrationShownForSession !== sessionId) {
-                  setCelebrationMessage(message);
+                  setCelebrationMessage(orderData);
                   setShowCelebration(true);
                   setCelebrationShownForSession(sessionId);
                   setTimeout(() => setShowCelebration(false), POLLING_INTERVALS.CELEBRATION_DISPLAY);

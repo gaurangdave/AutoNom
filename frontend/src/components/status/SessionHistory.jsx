@@ -19,7 +19,6 @@ import {
   hasUserChoice,
   getUserChoice,
   getOrderConfirmationMessage,
-  getOrderConfirmation,
   shouldShowChatIcon,
   getFormattedCreateTime
 } from '../../utils/sessionAccessors';
@@ -179,14 +178,10 @@ const SessionHistoryItem = ({ session, isActive, onChatClick }) => {
             )}
             {getOrderConfirmationMessage(session) && (
               <div>
-                {getOrderConfirmationMessage(session) && (
-              <div>
                 <span className="text-gray-400">Order Details:</span>
                 <p className="text-white mt-1 text-xs leading-relaxed">
-                  {getOrderConfirmation(session)}
+                  {getOrderConfirmationMessage(session)}
                 </p>
-              </div>
-            )}
               </div>
             )}
           </div>
