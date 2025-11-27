@@ -149,10 +149,10 @@ restaurant_scout_agent = LlmAgent(
 
     **CONTEXT:**
     You are processing a request for a specific user. You must adhere to their dietary restrictions absolutely.
-    - **Dietary Preferences:** {user_dietary_preferences}
-    - **Allergies (CRITICAL):** {user_allergies}
-    - **History:** {meal_options} (Do not repeat recent suggestions if possible)
-    - **Recent Feedback:** {user_feedback} (Use this to adjust your search strategy)
+    - **Dietary Preferences:** {user.dietary_preferences}
+    - **Allergies (CRITICAL):** {user.allergies}
+    - **History:** {planning.options} (Do not repeat recent suggestions if possible)
+    - **Recent Feedback:** {planning.user_feedback} (Use this to adjust your search strategy)
 
     **AVAILABLE TOOLS & USE CASES:**
     You have access to the following tools. Use them strategically to narrow down options efficiently.
@@ -247,7 +247,7 @@ def update_meal_options(options: MealOptions, tool_context: ToolContext) -> dict
     Returns:
         dict[str,str]: response dictionary with update operation status and message
     """
-    tool_context.state["meal_options"] = options.model_dump()
+    tool_context.state["planning"]["meal_options"] = options.model_dump()
 
     return {
         "status": "success",
@@ -270,7 +270,7 @@ def on_after_meal_planner_agent_call(callback_context: CallbackContext) -> None:
     new_state = "MEAL_PLANNING_COMPLETE"
 
     # verify if we have meal options
-    meal_options = callback_context.state["meal_options"]
+    meal_options = callback_context.state["planning"]["meal_options"]
     # options = meal_options.get("options", [])
 
     if meal_options and len(meal_options) == 0:
@@ -302,10 +302,10 @@ meal_planner = LlmAgent(
     
     ** User Feedback **
     Previously Shared Options:
-    {meal_options}
+    {planning.options}
     
     Feedback on previous options:
-    {user_feedback}
+    {planning.user_feedback}
     
     """,
     tools=[AgentTool(restaurant_scout_agent), FunctionTool(

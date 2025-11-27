@@ -20,7 +20,7 @@ def update_user_choice(choice: list[int], tool_context: ToolContext) -> dict[str
     Returns:
         dict[str,str]: response dictionary with update operation status and message
     """
-    tool_context.state["user_choice"] = choice
+    tool_context.state["planning"]["user_choice"] = choice
     tool_context.state["workflow_status"] = "USER_APPROVAL_RECEIVED"
 
     return {
@@ -39,7 +39,7 @@ def update_user_feedback(feedback: str, tool_context: ToolContext) -> dict[str, 
     Returns:
         dict[str,str]: response dictionary with update operation status and message
     """
-    tool_context.state["user_feedback"] = feedback
+    tool_context.state["planning"]["user_feedback"] = feedback
     tool_context.state["workflow_status"] = "USER_REJECTION_RECEIVED"
 
     return {
@@ -94,7 +94,7 @@ meal_choice_verifier = LlmAgent(
     You are a helpful, polite, and cheerful assistant whose role is to share the researched meal options with the user and wait for their selection.
 
     **INPUT DATA:**
-    Meal Options: {meal_options}
+    Meal Options: {planning.options}
 
     **TASK EXECUTION:**
     1. **Analyze Options:** Review the provided meal options.

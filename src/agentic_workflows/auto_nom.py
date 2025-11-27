@@ -26,15 +26,25 @@ class AutoNom():
         self.user = user
         self.meal_type = meal_type
         self.initial_state: dict[str, Any] = {
-            "user_name": user.name,
-            "user_id": user.id,
-            "user_dietary_preferences": ",\n".join(user.preferences) + "\n" + user.special_instructions,
-            "user_allergies": user.allergies,
+            "user": {
+                "id": user.id,
+                "name": user.name,
+                "dietary_preferences": ",".join(user.preferences),
+                "allergies": user.allergies,
+                "special_instructions": user.special_instructions
+            },
             "workflow_status": "IDLE",
-            "meal_type": meal_type,
-            "meal_options": [],
-            "user_feedback": "",
-            "user_choice": []
+            "planning": {
+                "meal_type": meal_type,
+                "options":[],
+                "user_feedback": "",
+                "user_choice": []
+            },
+            "retries":{
+                "meal_planner": 0,
+                "meal_choice_verifier": 0,
+                "meal_order_executor": 0
+            }
         }
         self.session_id = session_id if session_id else str(uuid.uuid4())
 
@@ -143,7 +153,8 @@ class AutoNom():
             return response
 
     async def __get_or_create_session(self):
-        existing_sessions = db_manager.get_session_by_id(session_id=self.session_id)
+        existing_sessions = db_manager.get_session_by_id(
+            session_id=self.session_id)
         # existing_sessions = await self.__session_service.list_sessions(app_name=self._app_name, user_id=self.user.id)
         if existing_sessions:
             # session_id = existing_sessions.sessions[0].id
@@ -161,7 +172,7 @@ class AutoNom():
                 state=self.initial_state
             )
 
-    async def run(self, user_input:str):
+    async def run(self, user_input: str):
         # Step 1 : Create a new session
         await self.__get_or_create_session()
 
@@ -197,18 +208,20 @@ class AutoNom():
                     agent_name=agent_name, event=event)
 
             if response:
-                workflow_status = db_manager.get_session_state_val(self.session_id, "workflow_status")
-                ServiceLogger.log_debug(f"Workflow Status in DB {workflow_status}")
+                workflow_status = db_manager.get_session_state_val(
+                    self.session_id, "workflow_status")
+                ServiceLogger.log_debug(
+                    f"Workflow Status in DB {workflow_status}")
                 response["workflow_status"] = workflow_status
-                
+
             yield (response)
 
     async def get_sse_event_stream(self, user_input: str):
         """Generate Server-Sent Events stream for real-time communication with client.
-        
+
         Args:
             user_input (str): The input message to process
-            
+
         Yields:
             str: SSE formatted data events
         """
@@ -222,9 +235,9 @@ class AutoNom():
                     item["session_id"] = self.session_id
                 data = json.dumps(item)
             except Exception:
-                data = json.dumps({"data": str(item), "session_id": self.session_id})
+                data = json.dumps(
+                    {"data": str(item), "session_id": self.session_id})
             # SSE format: each message prefixed with "data: " and separated by a blank line
             yield f"data: {data}\n\n"
         # final keep-alive/termination event (optional)
         yield "event: done\ndata: {}\n\n"
-

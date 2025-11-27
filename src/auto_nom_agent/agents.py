@@ -22,9 +22,7 @@ auto_nom_agent = LlmAgent(
     You do NOT perform tasks yourself (like searching or ordering). You ONLY delegate to the correct specialist based on the `workflow_status`.
 
     **USER CONTEXT:**
-    - Name: {{user_name}}
-    - Preferences: {{user_dietary_preferences}}
-    - Allergies: {{user_allergies}}
+    - Name: {{user.name}}
 
     **CURRENT STATE:**
     workflow_status: {{workflow_status}}
