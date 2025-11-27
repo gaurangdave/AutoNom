@@ -152,7 +152,7 @@ restaurant_scout_agent = LlmAgent(
     - **Dietary Preferences:** {user.dietary_preferences}
     - **Allergies (CRITICAL):** {user.allergies}
     - **History:** {planning.options} (Do not repeat recent suggestions if possible)
-    - **Recent Feedback:** {planning.user_feedback} (Use this to adjust your search strategy)
+    - **Recent Feedback:** {verification.user_feedback} (Use this to adjust your search strategy)
 
     **AVAILABLE TOOLS & USE CASES:**
     You have access to the following tools. Use them strategically to narrow down options efficiently.
@@ -305,7 +305,7 @@ meal_planner = LlmAgent(
     {planning.options}
     
     Feedback on previous options:
-    {planning.user_feedback}
+    {verification.user_feedback}
     
     """,
     tools=[AgentTool(restaurant_scout_agent), FunctionTool(

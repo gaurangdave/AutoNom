@@ -1,3 +1,5 @@
+from utils.logger import ServiceLogger
+
 def is_valid_transition(current_state: str, new_state: str) -> bool:
     """Helper function to check the validity of state transition
 
@@ -8,6 +10,7 @@ def is_valid_transition(current_state: str, new_state: str) -> bool:
     Returns:
         bool: _description_
     """
+    ServiceLogger.log_info(f"Checking state transition: {current_state} -> {new_state}", context="StateTransition")
     is_valid = False
 
     state_transitions = {
@@ -24,5 +27,8 @@ def is_valid_transition(current_state: str, new_state: str) -> bool:
 
     if new_state in state_transitions[current_state]:
         is_valid = True
+        ServiceLogger.log_success(f"Valid state transition: {current_state} -> {new_state}", context="StateTransition")
+    else:
+        ServiceLogger.log_warning(f"Invalid state transition: {current_state} -> {new_state}", context="StateTransition")
 
     return is_valid

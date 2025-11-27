@@ -255,6 +255,9 @@ async def resume_workflow(session_id: str, req: ResumeRequest, streaming: bool =
             status_code=500, detail=f"Failed to resume workflow: {str(e)}")
 
 
+
+
+
 @app.get("/api/sessions/{session_id}/state/{state_key}")
 async def get_session_state_value(session_id: str, state_key: str) -> dict[str, Any]:
     """
@@ -444,6 +447,83 @@ async def get_user_active_session_state(user_id: str, session_id: str) -> dict[s
         raise HTTPException(
             status_code=500, 
             detail=f"Failed to retrieve session state: {str(e)}"
+        )
+
+
+@app.post("/api/sessions/{session_id}/status", response_model=None)
+async def check_order_status(session_id: str, streaming: bool = False) -> dict[str, Any] | StreamingResponse:
+    """
+    Ping the agent to check the current status of an order.
+    Similar to resume_workflow but specifically asks the agent for status update.
+    """
+    try:
+        ServiceLogger.api_called_panel(
+            "POST",
+            f"/api/sessions/{session_id}/status",
+            params={"session_id": session_id, "streaming": streaming}
+        )
+        
+        # Step 1: Get the session to find the user_id
+        session = db_manager.get_session_by_id(session_id=session_id)
+        
+        if not session:
+            ServiceLogger.log_error(f"Cannot find session for {session_id}", "CHECK_ORDER_STATUS")
+            raise HTTPException(status_code=404, detail=f"Cannot find session for {session_id}")
+        
+        user_id = session.user_id
+        
+        # Step 2: Load user preferences from user id
+        current_user = db_manager.get_user(user_id=user_id)
+        if not current_user:
+            ServiceLogger.log_error(f"Cannot find user with ID {user_id}", "CHECK_ORDER_STATUS")
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        ServiceLogger.log_debug(
+            f"Found user: {current_user.id}",
+            "CHECK_ORDER_STATUS",
+            **current_user.model_dump()
+        )
+        
+        # Step 3: Initialize the agent with the existing session
+        auto_nom = AutoNom(current_user, session_id=session_id)
+        
+        # Ask the agent specifically about the order status
+        user_input = "What is the current status of my order?"
+        
+        # Return based on streaming flag
+        if streaming:
+            return StreamingResponse(
+                auto_nom.get_sse_event_stream(user_input),
+                media_type="text/event-stream"
+            )
+        else:
+            # Fire and forget: start workflow in background
+            async def run_status_check():
+                async for _ in auto_nom.run(user_input=user_input):
+                    pass  # Consume all events
+            
+            # Start the status check but don't wait for it
+            asyncio.create_task(run_status_check())
+            
+            # Get current workflow status
+            workflow_status = db_manager.get_session_state_val(session_id, "workflow_status")
+            
+            # Return immediately with session info
+            return {
+                "session_id": session_id,
+                "workflow_status": workflow_status or "CHECKING_STATUS",
+                "user_id": user_id,
+                "action": "status_check",
+                "timestamp": datetime.now().isoformat()
+            }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        ServiceLogger.log_error(
+            f"Failed to check order status for session: {session_id}", "CHECK_ORDER_STATUS", e)
+        raise HTTPException(
+            status_code=500, detail=f"Failed to check order status: {str(e)}"
         )
 
 

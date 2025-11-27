@@ -20,7 +20,7 @@ def update_user_choice(choice: list[int], tool_context: ToolContext) -> dict[str
     Returns:
         dict[str,str]: response dictionary with update operation status and message
     """
-    tool_context.state["planning"]["user_choice"] = choice
+    tool_context.state["verification"]["user_choice"] = choice
     tool_context.state["workflow_status"] = "USER_APPROVAL_RECEIVED"
 
     return {
@@ -39,7 +39,10 @@ def update_user_feedback(feedback: str, tool_context: ToolContext) -> dict[str, 
     Returns:
         dict[str,str]: response dictionary with update operation status and message
     """
-    tool_context.state["planning"]["user_feedback"] = feedback
+    current_verification_state = getattr(tool_context.state, "verification", {})
+    current_verification_state["user_feedback"] = feedback
+    tool_context.state["verification"] = current_verification_state
+    
     tool_context.state["workflow_status"] = "USER_REJECTION_RECEIVED"
 
     return {
@@ -57,8 +60,14 @@ def update_meal_choice_verification_message(meal_choice_verification_message: st
     Returns:
         dict[str, str]: response dictionary with update operation status and message
     """
-    tool_context.state["meal_choice_verification_message"] = meal_choice_verification_message
-    tool_context.state["meal_choices"] = choices
+    
+    current_verification_state = getattr(tool_context.state, "verification", {})
+    current_verification_state["message"] = meal_choice_verification_message
+    current_verification_state["choices"] = choices
+    tool_context.state["verification"] = current_verification_state
+    
+    tool_context.state["workflow_status"] = "AWAITING_USER_APPROVAL"
+
 
     return {
         "status": "success",

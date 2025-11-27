@@ -30,7 +30,7 @@ def print_food_order(food_order: FoodOrder):
                       ",".join(order_items.customizations))
 
 
-def place_food_order(food_order: FoodOrder, tool_context: ToolContext) -> dict[str, Any]:
+def place_food_order(food_order: FoodOrder) -> dict[str, Any]:
     """Places the food order with the restaurant and returns the order status
 
     Args:
@@ -46,6 +46,7 @@ def place_food_order(food_order: FoodOrder, tool_context: ToolContext) -> dict[s
         id=str(uuid.uuid4()),
         restaurant_id=food_order.id,
         status="ORDER_PLACED",
+        order=food_order
     )
 
     return {
@@ -66,13 +67,14 @@ def update_order_state(order_status: OrderStatus, tool_context: ToolContext) -> 
     """
 
     # get current list of orders
-    current_order_statuses = getattr(tool_context.state, "order_status", [])
+    current_order_state = getattr(tool_context.state, "ordering", {})
+    current_order_statuses = getattr(current_order_state, "order_status", [])
 
     # update list of orders
     current_order_statuses.append(order_status.model_dump())
 
     # update the state
-    tool_context.state["order_status"] = current_order_statuses
+    tool_context.state["ordering"]["order_status"] = current_order_statuses
 
     # return update status
     return {
@@ -92,7 +94,7 @@ def update_order_confirmation_message(order_confirmation_message: dict[str, Any]
     """
 
     # update the state
-    tool_context.state["order_confirmation_message"] = order_confirmation_message
+    tool_context.state["ordering"]["confirmation"] = order_confirmation_message
 
     # return update status
     return {
@@ -132,11 +134,11 @@ meal_order_executor = LlmAgent(
     - **User Preferences:** {user.dietary_preferences}
     - **Allergies (CRITICAL):** {user.allergies}
     - **Available Options:** {planning.options}
-    - **User Selection:** {planning.user_choice} (This is the index or ID of the chosen meal)
+    - **User Selection:** {verification.user_choice} (This is the index or ID of the chosen meal)
 
     **EXECUTION PLAN:**
     
-    1. **Identify the Meal:** - Locate the specific restaurant and menu item corresponding to the `{planning.user_choice}` from the `{planning.options}` list.
+    1. **Identify the Meal:** - Locate the specific restaurant and menu item corresponding to the `{verification.user_choice}` from the `{planning.options}` list.
        - *Validation:* Ensure the item does not conflict with `{user.allergies}`. If it does, STOP and ask for clarification (though this should have been caught earlier).
 
     2. **Place the Order:**

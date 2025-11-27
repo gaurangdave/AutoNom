@@ -37,9 +37,9 @@ class AutoNom():
             "planning": {
                 "meal_type": meal_type,
                 "options":[],
-                "user_feedback": "",
-                "user_choice": []
             },
+            "verification":{},
+            "ordering":{}
             # "retries":{
             #     "meal_planner": 0,
             #     "meal_choice_verifier": 0,

@@ -36,7 +36,7 @@ export const getMealType = (session) =>
  * @returns {string|null} The verification message or null
  */
 export const getMealChoiceVerificationMessage = (session) => 
-  session?.state?.meal_choice_verification_message || null;
+  session?.state?.verification?.message || null;
 
 /**
  * Get the array of meal choices
@@ -44,7 +44,7 @@ export const getMealChoiceVerificationMessage = (session) =>
  * @returns {Array} The meal choices array (empty array if none)
  */
 export const getMealChoices = (session) => 
-  session?.state?.meal_choices || [];
+  session?.state?.verification?.choices || [];
 
 // ============================================================================
 // User Choice Accessors
@@ -56,7 +56,7 @@ export const getMealChoices = (session) =>
  * @returns {Array} The user choice array (empty array if none)
  */
 export const getUserChoice = (session) => 
-  session?.state?.user_choice || [];
+  session?.state?.verification?.user_choice || [];
 
 /**
  * Check if the user has made a choice
@@ -78,7 +78,7 @@ export const hasUserChoice = (session) => {
  * @returns {Object|null} The order confirmation object with bill and message, or null
  */
 export const getOrderConfirmationData = (session) => 
-  session?.state?.order_confirmation_message || null;
+  session?.state?.ordering?.confirmation || null;
 
 /**
  * Get just the order confirmation message text
@@ -86,7 +86,7 @@ export const getOrderConfirmationData = (session) =>
  * @returns {string|null} The order confirmation message string or null
  */
 export const getOrderConfirmationMessage = (session) => 
-  session?.state?.order_confirmation_message?.message || null;
+  session?.state?.ordering?.confirmation?.message || null;
 
 /**
  * Get the order bill details
@@ -94,7 +94,7 @@ export const getOrderConfirmationMessage = (session) =>
  * @returns {Object|null} The bill object with items, total_amount, restaurant_name, or null
  */
 export const getOrderBill = (session) => 
-  session?.state?.order_confirmation_message?.bill || null;
+  session?.state?.ordering?.confirmation?.bill || null;
 
 /**
  * Get the order status array
@@ -102,7 +102,7 @@ export const getOrderBill = (session) =>
  * @returns {Array} The order status array (empty array if none)
  */
 export const getOrderStatus = (session) => 
-  session?.state?.order_status || [];
+  session?.state?.ordering?.order_status || [];
 
 // ============================================================================
 // Combined Checks and Utilities
