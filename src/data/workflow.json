@@ -2,17 +2,17 @@
   {
     "status": "IDLE",
     "meaning": "The workflow has just been triggered (e.g., by a schedule). No work has been done yet.",
-    "action": "Delegate to meal_planner agent to start researching."
+    "action": "Delegate to MealPlanner agent to start researching."
   },
   {
     "status": "MEAL_PLANNING_STARTED",
-    "meaning": "The meal_planner is currently active. It is searching for restaurants and gathering menu items.",
-    "action": "Delegate to meal_planner to continue planning"
+    "meaning": "The MealPlanner agent is currently active. It is searching for restaurants and gathering menu items.",
+    "action": "Delegate to MealPlanner agent to continue planning"
   },
   {
     "status": "MEAL_PLANNING_COMPLETE",
     "meaning": "Research is finished. Options are ready.",
-    "action": "Delegate to meal_choice_verifier to format/verify options."
+    "action": "Delegate to MealChoiceVerifier agent to format/verify options."
   },
   {
     "status": "MEAL_PLANNING_FAILED",
@@ -27,17 +27,17 @@
   {
     "status": "USER_APPROVAL_RECEIVED",
     "meaning": "User selected one or more meal options.",
-    "action": "Delegate to meal_order_executor to place the order for the selected item(s)."
+    "action": "Delegate to MealOrderExecutor agent to place the order for the selected item(s)."
   },
   {
     "status": "USER_REJECTION_RECEIVED",
     "meaning": "User rejected options and provided feedback.",
-    "action": "Delegate to meal_planner agent to start over with user feedback in mind."
+    "action": "Delegate to MealPlanner agent to start over with user feedback in mind."
   },
   {
     "status": "PLACING_ORDER",
     "meaning": "Order successfully placed.",
-    "action": "Wait for meal_order_executor to return confirmation."
+    "action": "Wait for MealOrderExecutor agent to return confirmation."
   },
   {
     "status": "ORDER_CONFIRMED",

@@ -144,7 +144,7 @@ restaurant_scout_agent = LlmAgent(
     model=Gemini(model=model, retry_options=retry_options),
     name="restaurant_scout_agent",
     description="Specialized researcher agent that queries external tools to find and select 3 optimal restaurant options based on specific user criteria.",
- instruction="""
+    instruction="""
     You are an expert Restaurant Scout Agent. Your goal is to research, filter, and select exactly 3 distinct meal options that best match the user's specific needs.
 
     **CONTEXT:**
@@ -296,7 +296,7 @@ meal_planner = LlmAgent(
     * Step 0: Welcome the user and inform them that you are finding restaurants for them in an exciting manner. 
     * Step 1: Use the `restaurant_scout_agent` tool to get the list of restaurants for the user.
     * Step 2: IMPORTANT after getting the list of restaurants use the `update_meal_options` tool to save the options for the user. DO NOT SKIP THIS STEP
-    * Step 3: After updating the state, your task is done. Delegate back to parent `auto_nom` agent.
+    * Step 3: After updating the state, your task is done. Delegate back to parent `auto_nom_agent` agent.
     ** Current Workflow Status **
     {workflow_status}
     
