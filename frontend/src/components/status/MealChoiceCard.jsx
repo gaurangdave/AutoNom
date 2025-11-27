@@ -1,8 +1,10 @@
 import { ChefHat, DollarSign, Flame } from 'lucide-react';
+import PropTypes from 'prop-types';
+import { CARD_STYLES } from '../../utils/styleClasses';
 
 const MealChoiceCard = ({ choice, index }) => {
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 hover:border-slate-600 transition-all">
+    <div className={`${CARD_STYLES.interactive} hover:border-slate-600`}>
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
@@ -44,6 +46,18 @@ const MealChoiceCard = ({ choice, index }) => {
       )}
     </div>
   );
+};
+
+MealChoiceCard.propTypes = {
+  choice: PropTypes.shape({
+    menu_item_name: PropTypes.string.isRequired,
+    restaurant_name: PropTypes.string.isRequired,
+    price: PropTypes.number.isRequired,
+    calories: PropTypes.number.isRequired,
+    description: PropTypes.string.isRequired,
+    special_instructions: PropTypes.string,
+  }).isRequired,
+  index: PropTypes.number.isRequired,
 };
 
 export default MealChoiceCard;

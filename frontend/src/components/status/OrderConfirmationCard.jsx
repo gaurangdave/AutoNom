@@ -1,4 +1,5 @@
 import { Store, DollarSign, ShoppingBag, CheckCircle2 } from 'lucide-react';
+import PropTypes from 'prop-types';
 
 const OrderConfirmationCard = ({ orderData }) => {
   // Handle both string and object formats
@@ -79,6 +80,11 @@ const OrderConfirmationCard = ({ orderData }) => {
       )}
     </div>
   );
+};
+
+OrderConfirmationCard.propTypes = {
+  message: PropTypes.string.isRequired,
+  onClose: PropTypes.func.isRequired,
 };
 
 export default OrderConfirmationCard;

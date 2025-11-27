@@ -11,6 +11,14 @@ export const ALLERGIES_LIST = [
   { name: 'Tree Nuts', icon: 'tree' },
 ];
 
+// Polling intervals (in milliseconds)
+export const POLLING_INTERVALS = {
+  SESSION_STATE: 5000,      // Poll active session state every 3 seconds
+  SESSION_HISTORY: 20000,   // Poll session history every 10 seconds (when no active session)
+  CELEBRATION_DISPLAY: 30000, // Show celebration popup for 10 seconds
+  RESUME_AFTER_FEEDBACK: 5000, // Delay before resuming polling after user feedback
+};
+
 export const WORKFLOW_STATUS = {
   IDLE: 'IDLE',
   STARTED: 'STARTED',

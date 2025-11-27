@@ -1,4 +1,5 @@
 import { CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import PropTypes from 'prop-types';
 import { WORKFLOW_STATUS } from '../../utils/constants';
 
 const ResponseStream = ({ sessionState }) => {
@@ -110,6 +111,19 @@ const ResponseStream = ({ sessionState }) => {
       ))}
     </div>
   );
+};
+
+ResponseStream.propTypes = {
+  sessionState: PropTypes.shape({
+    create_time: PropTypes.string,
+    state: PropTypes.shape({
+      workflow_status: PropTypes.string,
+      planning: PropTypes.object,
+      meal_planning_result: PropTypes.array,
+      user_choice: PropTypes.array,
+      order: PropTypes.object,
+    }),
+  }),
 };
 
 export default ResponseStream;

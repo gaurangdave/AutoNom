@@ -8,6 +8,7 @@ import MealsTab from './components/tabs/MealsTab';
 import StatusTab from './components/tabs/StatusTab';
 import ToastContainer from './components/common/ToastContainer';
 import { UserCog, Utensils, ListChecks } from 'lucide-react';
+import { BUTTON_STYLES } from './utils/styleClasses';
 import './App.css';
 
 function App() {
@@ -35,11 +36,7 @@ function App() {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
-                        activeTab === tab.id
-                          ? 'bg-slate-700 text-white shadow-sm'
-                          : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
-                      }`}
+                      className={activeTab === tab.id ? BUTTON_STYLES.tabActive : BUTTON_STYLES.tabInactive}
                     >
                       <Icon className="inline mr-2" size={16} />
                       {tab.label}

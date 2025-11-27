@@ -6,7 +6,12 @@ import { useToast } from '../../hooks/useToast';
 import { SessionContext } from '../../context/SessionContext';
 import { useStatusStore } from '../../stores/statusStore';
 import { getMealChoiceVerificationMessage, getMealChoices } from '../../utils/sessionAccessors';
+import { createLogger } from '../../utils/logger';
+import { INFO_MESSAGES, MODAL_SIZES, MODAL_HEIGHTS, ICON_SIZES } from '../../utils/uiConstants';
+import Card from '../common/Card';
 import StatusCard from '../status/StatusCard';
+
+const logger = createLogger('StatusTab');
 import SelectionModal from '../status/SelectionModal';
 import SessionHistory from '../status/SessionHistory';
 import OrderConfirmationCard from '../status/OrderConfirmationCard';
@@ -68,7 +73,7 @@ const StatusTab = () => {
     // Submit in the background
     submitUserResponse(userId, sessionId, response)
       .then(() => {
-        console.log('[StatusTab] User response submitted successfully');
+        logger.log('User response submitted successfully');
         
         // Resume polling via SessionProvider
         if (sessionContext?.resumePollingAfterFeedback) {
@@ -76,7 +81,7 @@ const StatusTab = () => {
         }
       })
       .catch((error) => {
-        console.error('Error submitting response:', error);
+        logger.error('Error submitting response:', error);
         toast.error('Failed to submit response. Please try again.');
       });
   };
@@ -96,14 +101,14 @@ const StatusTab = () => {
         workflowStatus={currentWorkflowStatus}
       />
 
-      {/* Info Message */}
+            {/* Info Message */}
       {!currentSessionState && (
-        <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex items-start gap-3">
-          <Info className="text-blue-400 mt-1" size={20} />
+        <Card variant="info" className="flex items-start gap-3">
+          <Info className="text-blue-400 mt-1" size={ICON_SIZES.xl} />
           <div className="text-sm text-blue-200">
-            No activity yet. Navigate to the "My Meals" tab and click "Plan Now" on any meal to start the autonomous agent workflow.
+            {INFO_MESSAGES.noActivity}
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Session History */}
@@ -124,10 +129,10 @@ const StatusTab = () => {
 
       {/* Celebration Overlay */}
       {showCelebration && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-linear-to-br from-green-600 to-green-700 border border-green-500 rounded-2xl max-w-2xl w-full mx-4 p-8 shadow-2xl transform celebration-bounce max-h-[90vh] overflow-y-auto">
-            <div className="mb-6 text-center">
-              <PartyPopper className="mx-auto text-white mb-3" size={64} />
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+          <div className={`bg-linear-to-br from-green-600 to-green-700 border border-green-500 rounded-2xl ${MODAL_SIZES.medium} w-full mx-4 p-8 shadow-2xl transform celebration-bounce ${MODAL_HEIGHTS.tall} overflow-y-auto`}>
+            <div className="text-center text-white">
+              <PartyPopper className="mx-auto mb-6 animate-bounce" size={64} />
               <h3 className="text-3xl font-bold text-white mb-2">Order Confirmed! 🎉</h3>
               <p className="text-green-100 text-sm">Your order has been successfully placed</p>
             </div>

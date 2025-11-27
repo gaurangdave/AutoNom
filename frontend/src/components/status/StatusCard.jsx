@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ChevronDown, Loader2 } from 'lucide-react';
+import PropTypes from 'prop-types';
 import ResponseStream from './ResponseStream';
 import { getWorkflowProgress } from '../../utils/constants';
 
@@ -68,6 +69,14 @@ const StatusCard = ({ title, subtitle, isActive, sessionState, workflowStatus })
       )}
     </div>
   );
+};
+
+StatusCard.propTypes = {
+  title: PropTypes.string.isRequired,
+  subtitle: PropTypes.string.isRequired,
+  isActive: PropTypes.bool.isRequired,
+  sessionState: PropTypes.object,
+  workflowStatus: PropTypes.string,
 };
 
 export default StatusCard;

@@ -1,105 +1,13 @@
 import { useState, useCallback } from 'react';
 import axios from 'axios';
+import { createLogger } from '../utils/logger';
+import { transformAPIUserToFrontend, transformFrontendUserToAPI } from '../utils/userTransformers';
+import { useLoadingState } from './useLoadingState';
 
-// Helper to convert API format to frontend format
-const transformAPIUserToFrontend = (apiUser) => {
-  if (!apiUser) return null;
-  
-  // Convert schedule.days array to boolean array [Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday]
-  // API format uses unambiguous identifiers: "m", "tu", "w", "th", "f", "sa", "su"
-  // For backwards compatibility with old data, support ambiguous single-letter formats
-  const scheduleBooleans = [false, false, false, false, false, false, false];
-  
-  if (apiUser.schedule?.days && Array.isArray(apiUser.schedule.days)) {
-    // Map day abbreviations to indices (Monday=0, Sunday=6)
-    const dayMap = { 
-      'm': 0,      // Monday
-      'tu': 1,     // Tuesday
-      'w': 2,      // Wednesday
-      'th': 3,     // Thursday
-      'f': 4,      // Friday
-      'sa': 5,     // Saturday
-      'su': 6      // Sunday
-    };
-    
-    // Track ambiguous 't' values for backward compatibility with old database data
-    const ambiguousTCount = apiUser.schedule.days.filter(d => d.toLowerCase().trim() === 't').length;
-    let tProcessed = 0;
-    
-    apiUser.schedule.days.forEach((day) => {
-      const dayLower = day.toLowerCase().trim();
-      let index = dayMap[dayLower];
-      
-      // Handle legacy ambiguous format: 't' could be Tuesday or Thursday
-      // If multiple 't' values exist, treat first as Tuesday, second as Thursday
-      if (dayLower === 't') {
-        if (ambiguousTCount > 1 && tProcessed === 0) {
-          index = 1; // First 't' = Tuesday
-        } else if (ambiguousTCount > 1 && tProcessed === 1) {
-          index = 3; // Second 't' = Thursday
-        } else {
-          index = 1; // Single 't' = Tuesday (default)
-        }
-        tProcessed++;
-      }
-      // Handle legacy ambiguous format: 's' could be Saturday or Sunday
-      else if (dayLower === 's') {
-        index = 5; // Default 's' to Saturday
-      }
-      
-      if (index !== undefined) {
-        scheduleBooleans[index] = true;
-      }
-    });
-  }
-  
-  // Convert meals and ensure each has an id
-  const meals = (apiUser.schedule?.meals || []).map((meal, index) => ({
-    ...meal,
-    id: meal.id || `meal_${apiUser.id}_${index}_${Date.now()}`
-  }));
-  
-  return {
-    user_id: apiUser.id,
-    name: apiUser.name,
-    preferences: apiUser.preferences || [],
-    allergies: apiUser.allergies || [],
-    schedule: scheduleBooleans,
-    meals: meals,
-    instructions: apiUser.special_instructions || ''
-  };
-};
-
-// Helper to convert frontend format to API format
-const transformFrontendUserToAPI = (frontendUser) => {
-  if (!frontendUser) return null;
-  
-  // Convert boolean array to unambiguous day identifiers
-  // Frontend: [Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday]
-  // API: ["m", "tu", "w", "th", "f", "sa", "su"]
-  const dayNames = ['m', 'tu', 'w', 'th', 'f', 'sa', 'su'];
-  const selectedDays = [];
-  frontendUser.schedule.forEach((isSelected, index) => {
-    if (isSelected) {
-      selectedDays.push(dayNames[index]);
-    }
-  });
-  
-  return {
-    id: frontendUser.user_id,
-    name: frontendUser.name,
-    preferences: frontendUser.preferences || [],
-    allergies: frontendUser.allergies || [],
-    schedule: {
-      days: selectedDays,
-      meals: frontendUser.meals || []
-    },
-    special_instructions: frontendUser.instructions || ''
-  };
-};
+const logger = createLogger('useAutoNom');
 
 export const useAutoNom = () => {
-  const [isProcessing, setIsProcessing] = useState(false);
+  const { isLoading: isProcessing, setIsLoading: setIsProcessing } = useLoadingState();
   const [eventLog, setEventLog] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
 
@@ -111,7 +19,7 @@ export const useAutoNom = () => {
       const users = response.data.map(transformAPIUserToFrontend);
       return users;
     } catch (error) {
-      console.error('Error fetching users:', error);
+      logger.error('Error fetching users:', error);
       return [];
     }
   }, []);
@@ -125,7 +33,7 @@ export const useAutoNom = () => {
       // Transform response back to frontend format
       return transformAPIUserToFrontend(response.data);
     } catch (error) {
-      console.error('Error saving user:', error);
+      logger.error('Error saving user:', error);
       throw error;
     }
   }, []);
@@ -136,7 +44,7 @@ export const useAutoNom = () => {
       const response = await axios.get(`/api/users/${userId}/sessions`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching user sessions:', error);
+      logger.error('Error fetching user sessions:', error);
       return null;
     }
   }, []);
@@ -147,7 +55,7 @@ export const useAutoNom = () => {
       const response = await axios.get(`/api/users/${userId}/active-sessions`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching active sessions:', error);
+      logger.error('Error fetching active sessions:', error);
       return null;
     }
   }, []);
@@ -158,7 +66,7 @@ export const useAutoNom = () => {
       const response = await axios.get(`/api/users/${userId}/active-sessions/${sessionId}/state`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching session state:', error);
+      logger.error('Error fetching session state:', error);
       return null;
     }
   }, []);
@@ -166,13 +74,13 @@ export const useAutoNom = () => {
   // Submit user response to approval
   const submitUserResponse = useCallback(async (userId, sessionId, userResponse) => {
     try {
-      console.log('[useAutoNom] Submitting user response:', { userId, sessionId, userResponse });
+      logger.log('Submitting user response:', { userId, sessionId, userResponse });
       const response = await axios.post(
         `/api/sessions/${sessionId}/resume?streaming=false`,
         { choice: userResponse }
       );
       
-      console.log('[useAutoNom] Resume response:', response.data);
+      logger.log('Resume response:', response.data);
       
       if (response.data) {
         // Add event to log
@@ -195,7 +103,7 @@ export const useAutoNom = () => {
       
       return response.data;
     } catch (error) {
-      console.error('[useAutoNom] Error submitting user response:', error);
+      logger.error('Error submitting user response:', error);
       throw error;
     }
   }, []);
@@ -206,22 +114,22 @@ export const useAutoNom = () => {
     setEventLog([]);
     
     try {
-      console.log('[useAutoNom] Triggering plan:', { userId, mealType });
+      logger.log('Triggering plan:', { userId, mealType });
       const response = await axios.post(
         `/api/users/${userId}/meals/${mealType}/trigger?streaming=false`
       );
 
-      console.log('[useAutoNom] Trigger response:', response.data);
+      logger.log('Trigger response:', response.data);
 
       if (response.data) {
         const { session_id, workflow_status } = response.data;
         
-        console.log('[useAutoNom] Setting session ID:', session_id);
+        logger.log('Setting session ID:', session_id);
         
         // Store session ID
         if (session_id) {
           setCurrentSessionId(session_id);
-          console.log('[useAutoNom] Session ID set to:', session_id);
+          logger.log('Session ID set to:', session_id);
         }
 
         // Add event to log
@@ -248,11 +156,11 @@ export const useAutoNom = () => {
         if (onComplete) onComplete(response.data);
       }
     } catch (error) {
-      console.error('[useAutoNom] Error in triggerPlan:', error);
+      logger.error('Error in triggerPlan:', error);
       setIsProcessing(false);
       if (onError) onError(error);
     }
-  }, []);
+  }, [setIsProcessing]);
 
   return {
     isProcessing,

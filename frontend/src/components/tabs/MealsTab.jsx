@@ -1,9 +1,15 @@
 import { useState } from 'react';
 import { Info } from 'lucide-react';
+import PropTypes from 'prop-types';
 import { useUser } from '../../hooks/useUser';
 import { useAutoNom } from '../../hooks/useAutoNom';
 import { useToast } from '../../hooks/useToast';
+import { createLogger } from '../../utils/logger';
+import { INFO_MESSAGES, ERROR_MESSAGES, ICON_SIZES } from '../../utils/uiConstants';
+import Card from '../common/Card';
 import MealRoutineCard from '../meals/MealRoutineCard';
+
+const logger = createLogger('MealsTab');
 
 const MealsTab = ({ setActiveTab }) => {
   const { currentUser, getCurrentUserId, setActiveSessionId } = useUser();
@@ -27,70 +33,70 @@ const MealsTab = ({ setActiveTab }) => {
         userId,
         mealType,
         (eventData) => {
-          console.log('Event:', eventData);
+          logger.log('Event:', eventData);
           // Store session ID in UserContext when received
           if (eventData.session_id) {
-            console.log('[MealsTab] Setting active session ID:', eventData.session_id);
+            logger.log('Setting active session ID:', eventData.session_id);
             setActiveSessionId(eventData.session_id);
             // Switch to Status tab to see the workflow progress
-            console.log('[MealsTab] Switching to Status tab');
+            logger.log('Switching to Status tab');
             setActiveTab('status');
           }
         },
         (responseData) => {
-          console.log('Planning completed:', responseData);
+          logger.log('Planning completed:', responseData);
           // Also set session ID from completion response
           if (responseData?.session_id) {
-            console.log('[MealsTab] Setting active session ID from completion:', responseData.session_id);
+            logger.log('Setting active session ID from completion:', responseData.session_id);
             setActiveSessionId(responseData.session_id);
             // Switch to Status tab to see the workflow progress
-            console.log('[MealsTab] Switching to Status tab');
+            logger.log('Switching to Status tab');
             setActiveTab('status');
           }
           setPlanningMeal(null);
         },
         (error) => {
-          console.error('Planning error:', error);
-          toast.error('Failed to start meal planning. Please try again.');
+          logger.error('Planning error:', error);
+          toast.error(ERROR_MESSAGES.planningFailed);
           setPlanningMeal(null);
         }
       );
     } catch (error) {
-      console.error('Error triggering plan:', error);
+      logger.error('Error triggering plan:', error);
       setPlanningMeal(null);
     }
   };
 
   if (!currentUser) {
     return (
-      <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex items-start gap-3">
-        <Info className="text-blue-400 mt-1" size={20} />
+      <Card variant="info" className="flex items-start gap-3">
+        <Info className="text-blue-400 mt-1" size={ICON_SIZES.xl} />
         <div className="text-sm text-blue-200">
-          Please select or create a user profile first.
+          {INFO_MESSAGES.noUser}
         </div>
-      </div>
+      </Card>
     );
   }
 
   if (meals.length === 0) {
     return (
-      <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex items-start gap-3">
-        <Info className="text-blue-400 mt-1" size={20} />
+      <Card variant="info" className="flex items-start gap-3">
+        <Info className="text-blue-400 mt-1" size={ICON_SIZES.xl} />
         <div className="text-sm text-blue-200">
-          No meal routines configured yet. Please add meal slots in your profile.
+          {INFO_MESSAGES.noMeals}
         </div>
-      </div>
+      </Card>
     );
   }
 
   return (
     <div>
-      <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 mb-6 flex items-start gap-3">
-        <Info className="text-blue-400 mt-1" size={20} />
+      <Card variant="info" className="mb-6 flex items-start gap-3">
+        <Info className="text-blue-400 mt-1" size={ICON_SIZES.xl} />
         <div className="text-sm text-blue-200">
-          These are the meal routines configured in your profile. Click "Plan Now" to manually trigger the agent for a specific meal.
+          {INFO_MESSAGES.mealInstructions}
         </div>
-      </div>
+      </Card>
 
       <div className="space-y-4">
         {meals.map((meal, index) => (
@@ -110,6 +116,10 @@ const MealsTab = ({ setActiveTab }) => {
       )}
     </div>
   );
+};
+
+MealsTab.propTypes = {
+  setActiveTab: PropTypes.func.isRequired,
 };
 
 export default MealsTab;

@@ -1,4 +1,5 @@
 import { CheckCircle2, XCircle, AlertTriangle, Info, X } from 'lucide-react';
+import PropTypes from 'prop-types';
 import { useToast } from '../../hooks/useToast';
 
 const Toast = ({ id, message, type }) => {
@@ -65,6 +66,12 @@ const Toast = ({ id, message, type }) => {
       </button>
     </div>
   );
+};
+
+Toast.propTypes = {
+  id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+  message: PropTypes.string.isRequired,
+  type: PropTypes.oneOf(['success', 'error', 'warning', 'info']).isRequired,
 };
 
 export default Toast;

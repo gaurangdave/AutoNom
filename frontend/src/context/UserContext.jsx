@@ -7,7 +7,6 @@ export const UserProvider = ({ children }) => {
   const [users, setUsers] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(savedUserId);
-  const [isLoading, setIsLoading] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState(null);
 
   // Sync currentUser when currentUserId or users change
@@ -99,8 +98,6 @@ export const UserProvider = ({ children }) => {
     setUsers,
     currentUser,
     currentUserId,
-    isLoading,
-    setIsLoading,
     activeSessionId,
     setActiveSessionId,
     getUserById,
@@ -117,7 +114,6 @@ export const UserProvider = ({ children }) => {
     users,
     currentUser,
     currentUserId,
-    isLoading,
     activeSessionId,
     getUserById,
     selectUser,

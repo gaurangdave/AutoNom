@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Plus } from 'lucide-react';
+import PropTypes from 'prop-types';
+import { INPUT_STYLES, BUTTON_STYLES } from '../../utils/styleClasses';
+import { PLACEHOLDERS, ICON_SIZES } from '../../utils/uiConstants';
 
 const PreferenceInput = ({ preferences, onChange }) => {
   const [inputValue, setInputValue] = useState('');
@@ -30,14 +33,14 @@ const PreferenceInput = ({ preferences, onChange }) => {
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="e.g., Low Sodium, No Cilantro..."
-          className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-primary-500"
+          onKeyDown={handleKeyPress}
+          placeholder={PLACEHOLDERS.preference}
+          className={INPUT_STYLES.text}
         />
         <button
           type="button"
           onClick={addPreference}
-          className="bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-lg transition-colors"
+          className={BUTTON_STYLES.primaryCompact}
         >
           Add
         </button>
@@ -61,6 +64,11 @@ const PreferenceInput = ({ preferences, onChange }) => {
       </div>
     </div>
   );
+};
+
+PreferenceInput.propTypes = {
+  preferences: PropTypes.arrayOf(PropTypes.string).isRequired,
+  onChange: PropTypes.func.isRequired,
 };
 
 export default PreferenceInput;

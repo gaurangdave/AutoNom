@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { DAYS } from '../../utils/constants';
 
 const DaySelector = ({ selectedDays, onChange }) => {
@@ -25,6 +26,11 @@ const DaySelector = ({ selectedDays, onChange }) => {
       ))}
     </div>
   );
+};
+
+DaySelector.propTypes = {
+  selectedDays: PropTypes.arrayOf(PropTypes.bool).isRequired,
+  onChange: PropTypes.func.isRequired,
 };
 
 export default DaySelector;

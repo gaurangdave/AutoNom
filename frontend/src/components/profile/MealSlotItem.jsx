@@ -1,4 +1,7 @@
 import { X } from 'lucide-react';
+import PropTypes from 'prop-types';
+import { INPUT_STYLES } from '../../utils/styleClasses';
+import { PLACEHOLDERS, ICON_SIZES } from '../../utils/uiConstants';
 
 const MealSlotItem = ({ meal, onRemove, onChange }) => {
   const handleTypeChange = (e) => {
@@ -24,7 +27,7 @@ const MealSlotItem = ({ meal, onRemove, onChange }) => {
         <select
           value={meal.type === 'Breakfast' || meal.type === 'Lunch' || meal.type === 'Dinner' ? meal.type : 'Custom'}
           onChange={handleTypeChange}
-          className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary-500"
+          className={INPUT_STYLES.compact}
         >
           <option>Breakfast</option>
           <option>Lunch</option>
@@ -36,8 +39,8 @@ const MealSlotItem = ({ meal, onRemove, onChange }) => {
             type="text"
             value={meal.customName || meal.type}
             onChange={handleCustomNameChange}
-            placeholder="e.g., Post-Patrol Meal"
-            className="w-full mt-2 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary-500"
+            placeholder={PLACEHOLDERS.mealName}
+            className={`${INPUT_STYLES.compact} mt-2`}
           />
         )}
       </div>
@@ -46,25 +49,37 @@ const MealSlotItem = ({ meal, onRemove, onChange }) => {
           type="time"
           value={meal.start}
           onChange={handleStartChange}
-          className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary-500"
+          className={INPUT_STYLES.time}
         />
         <span className="text-slate-500 self-center">-</span>
         <input
           type="time"
           value={meal.end}
           onChange={handleEndChange}
-          className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary-500"
+          className={INPUT_STYLES.time}
         />
         <button
           type="button"
           onClick={onRemove}
           className="bg-red-500/10 hover:bg-red-500/20 text-red-400 p-2 rounded-lg transition-colors"
         >
-          <X size={16} />
+          <X size={ICON_SIZES.md} />
         </button>
       </div>
     </div>
   );
+};
+
+MealSlotItem.propTypes = {
+  meal: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    type: PropTypes.string.isRequired,
+    start: PropTypes.string.isRequired,
+    end: PropTypes.string.isRequired,
+    customName: PropTypes.string,
+  }).isRequired,
+  onRemove: PropTypes.func.isRequired,
+  onChange: PropTypes.func.isRequired,
 };
 
 export default MealSlotItem;

@@ -2,13 +2,16 @@ import { createContext, useEffect, useRef } from 'react';
 import { useUser } from '../hooks/useUser';
 import { useAutoNom } from '../hooks/useAutoNom';
 import { useStatusStore } from '../stores/statusStore';
-import { WORKFLOW_STATUS, getStatusDisplay } from '../utils/constants';
+import { WORKFLOW_STATUS, POLLING_INTERVALS, getStatusDisplay } from '../utils/constants';
+import { createLogger } from '../utils/logger';
 import {
   getWorkflowStatus,
   getMealChoiceVerificationMessage,
   getMealChoices,
   getOrderConfirmation
 } from '../utils/sessionAccessors';
+
+const logger = createLogger('SessionProvider');
 
 const SessionContext = createContext(null);
 
@@ -56,7 +59,7 @@ export const SessionProvider = ({ children }) => {
           sessionHistoryRef.current = sortedSessions;
         }
       } catch (error) {
-        console.error('[SessionProvider] Error loading session history:', error);
+        logger.error('Error loading session history:', error);
       }
     };
 
@@ -71,10 +74,10 @@ export const SessionProvider = ({ children }) => {
     
     // Only poll session history if there's NO active session
     if (!activeSessionId) {
-      console.log('[SessionProvider] No active session, starting history polling');
-      historyPollIntervalRef.current = setInterval(loadSessionHistory, 10000);
+      logger.log('No active session, starting history polling');
+      historyPollIntervalRef.current = setInterval(loadSessionHistory, POLLING_INTERVALS.SESSION_HISTORY);
     } else {
-      console.log('[SessionProvider] Active session exists, skipping history polling');
+      logger.log('Active session exists, skipping history polling');
     }
     
     return () => {
@@ -96,7 +99,7 @@ export const SessionProvider = ({ children }) => {
       );
       
       if (latestActiveSession) {
-        console.log('[SessionProvider] Auto-setting active session from history:', latestActiveSession.session_id);
+        logger.log('Auto-setting active session from history:', latestActiveSession.session_id);
         setActiveSessionId(latestActiveSession.session_id);
       }
     }
@@ -106,7 +109,7 @@ export const SessionProvider = ({ children }) => {
   useEffect(() => {
     const userId = getCurrentUserId();
     
-    console.log('[SessionProvider] Session polling effect triggered:', { activeSessionId, userId });
+    logger.log('Session polling effect triggered:', { activeSessionId, userId });
     
     // Clear any existing session state polling interval
     if (pollIntervalRef.current) {
@@ -116,11 +119,11 @@ export const SessionProvider = ({ children }) => {
     
     // If no valid session or no user, stop polling
     if (!activeSessionId || !userId) {
-      console.log('[SessionProvider] No session or user, stopping session state polling');
+      logger.log('No session or user, stopping session state polling');
       return;
     }
 
-    console.log('[SessionProvider] Active session ID detected:', activeSessionId);
+    logger.log('Active session ID detected:', activeSessionId);
     
     // Reset user feedback flag and previous workflow status for new session
     resetForNewSession();
@@ -128,7 +131,7 @@ export const SessionProvider = ({ children }) => {
     
     // Stop history polling when we start session state polling
     if (historyPollIntervalRef.current) {
-      console.log('[SessionProvider] Stopping history polling to start session state polling');
+      logger.log('Stopping history polling to start session state polling');
       clearInterval(historyPollIntervalRef.current);
       historyPollIntervalRef.current = null;
     }
@@ -136,14 +139,14 @@ export const SessionProvider = ({ children }) => {
     // Function to poll session state
     const pollSessionState = async () => {
       try {
-        console.log('[SessionProvider] Polling session state for:', { userId, activeSessionId });
+        logger.log('Polling session state for:', { userId, activeSessionId });
         const sessionState = await fetchSessionState(userId, activeSessionId);
-        console.log('[SessionProvider] Session state response:', sessionState);
+        logger.log('Session state response:', sessionState);
         
         if (sessionState && sessionState.state) {
           const workflowStatus = getWorkflowStatus(sessionState);
           const previousStatus = previousWorkflowStatusRef.current;
-          console.log('[SessionProvider] Workflow status:', workflowStatus, 'Previous:', previousStatus);
+          logger.log('Workflow status:', workflowStatus, 'Previous:', previousStatus);
           
           // Update Zustand store with session state
           setCurrentSessionState(sessionState);
@@ -180,15 +183,15 @@ export const SessionProvider = ({ children }) => {
             const mealChoices = getMealChoices(sessionState);
             
             if (message && isTransitionToApproval && !showModal) {
-              console.log('[SessionProvider] Edge trigger detected: MEAL_PLANNING_COMPLETE -> AWAITING_USER_APPROVAL');
-              console.log('[SessionProvider] Showing approval modal with message and meal choices');
+              logger.log('Edge trigger detected: MEAL_PLANNING_COMPLETE -> AWAITING_USER_APPROVAL');
+              logger.log('Showing approval modal with message and meal choices');
               setModalMessage(message);
               setModalMealChoices(mealChoices);
               setShowModal(true);
               
               // Stop polling while modal is open
               if (pollIntervalRef.current) {
-                console.log('[SessionProvider] Pausing polling while modal is open');
+                logger.log('Pausing polling while modal is open');
                 clearInterval(pollIntervalRef.current);
                 pollIntervalRef.current = null;
               }
@@ -197,15 +200,15 @@ export const SessionProvider = ({ children }) => {
             // Show celebration popup with order confirmation message (only once per session)
             const message = getOrderConfirmation(sessionState) || 'Your meal order has been successfully placed!';
             if (celebrationShownForSession !== activeSessionId) {
-              console.log('[SessionProvider] Showing celebration popup for session:', activeSessionId);
+              logger.log('Showing celebration popup for session:', activeSessionId);
               setCelebrationMessage(message);
               setShowCelebration(true);
               setCelebrationShownForSession(activeSessionId);
-              setTimeout(() => setShowCelebration(false), 10000);
+              setTimeout(() => setShowCelebration(false), POLLING_INTERVALS.CELEBRATION_DISPLAY);
             }
             
             // Stop session state polling once order is confirmed
-            console.log('[SessionProvider] Order confirmed, stopping session state polling');
+            logger.log('Order confirmed, stopping session state polling');
             if (pollIntervalRef.current) {
               clearInterval(pollIntervalRef.current);
               pollIntervalRef.current = null;
@@ -219,20 +222,20 @@ export const SessionProvider = ({ children }) => {
           previousWorkflowStatusRef.current = workflowStatus;
         }
       } catch (error) {
-        console.error('[SessionProvider] Error polling session state:', error);
+        logger.error('Error polling session state:', error);
       }
     };
 
     // Poll immediately
-    console.log('[SessionProvider] Starting immediate poll and setting up interval');
+    logger.log('Starting immediate poll and setting up interval');
     pollSessionState();
     
-    // Set up polling interval (every 3 seconds)
-    pollIntervalRef.current = setInterval(pollSessionState, 3000);
+    // Set up polling interval
+    pollIntervalRef.current = setInterval(pollSessionState, POLLING_INTERVALS.SESSION_STATE);
 
     // Cleanup on unmount or when dependencies change
     return () => {
-      console.log('[SessionProvider] Cleaning up session state polling interval');
+      logger.log('Cleaning up session state polling interval');
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
         pollIntervalRef.current = null;
@@ -268,14 +271,14 @@ export const SessionProvider = ({ children }) => {
     // Resume polling after a delay to give backend time to process
     setTimeout(() => {
       if (!pollIntervalRef.current && activeSessionId) {
-        console.log('[SessionProvider] Resuming polling after feedback submission');
+        logger.log('Resuming polling after feedback submission');
         
         const resumedPollSessionState = async () => {
           try {
             const sessionState = await fetchSessionState(userId, sessionId);
             if (sessionState && sessionState.state) {
               const workflowStatus = getWorkflowStatus(sessionState);
-              console.log('[SessionProvider] Resumed polling - workflow status:', workflowStatus);
+              logger.log('Resumed polling - workflow status:', workflowStatus);
               
               // Update store with new session state
               setCurrentSessionState(sessionState);
@@ -297,7 +300,7 @@ export const SessionProvider = ({ children }) => {
                   setCelebrationMessage(message);
                   setShowCelebration(true);
                   setCelebrationShownForSession(sessionId);
-                  setTimeout(() => setShowCelebration(false), 10000);
+                  setTimeout(() => setShowCelebration(false), POLLING_INTERVALS.CELEBRATION_DISPLAY);
                 }
                 
                 if (pollIntervalRef.current) {
@@ -308,14 +311,14 @@ export const SessionProvider = ({ children }) => {
               }
             }
           } catch (error) {
-            console.error('[SessionProvider] Error in resumed polling:', error);
+            logger.error('Error in resumed polling:', error);
           }
         };
         
         resumedPollSessionState();
-        pollIntervalRef.current = setInterval(resumedPollSessionState, 3000);
+        pollIntervalRef.current = setInterval(resumedPollSessionState, POLLING_INTERVALS.SESSION_STATE);
       }
-    }, 3000);
+    }, POLLING_INTERVALS.RESUME_AFTER_FEEDBACK);
   };
 
   const value = {

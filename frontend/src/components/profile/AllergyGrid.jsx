@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { ALLERGIES_LIST } from '../../utils/constants';
 import { 
   Cookie, 
@@ -55,6 +56,11 @@ const AllergyGrid = ({ allergies, onChange }) => {
       })}
     </div>
   );
+};
+
+AllergyGrid.propTypes = {
+  allergies: PropTypes.arrayOf(PropTypes.string).isRequired,
+  onChange: PropTypes.func.isRequired,
 };
 
 export default AllergyGrid;
