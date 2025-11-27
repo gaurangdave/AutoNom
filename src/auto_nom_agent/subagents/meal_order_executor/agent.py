@@ -30,7 +30,7 @@ def print_food_order(food_order: FoodOrder):
                       ",".join(order_items.customizations))
 
 
-def place_food_order(food_order: FoodOrder) -> dict[str, Any]:
+def place_food_order(food_order: FoodOrder, tool_context: ToolContext) -> dict[str, Any]:
     """Places the food order with the restaurant and returns the order status
 
     Args:
@@ -46,25 +46,8 @@ def place_food_order(food_order: FoodOrder) -> dict[str, Any]:
         id=str(uuid.uuid4()),
         restaurant_id=food_order.id,
         status="ORDER_PLACED",
-        order=food_order
+        order=food_order.model_dump()
     )
-
-    return {
-        "status": "success",
-        "message": "Order placed successfully",
-        "order_status": order_status
-    }
-
-
-def update_order_state(order_status: OrderStatus, tool_context: ToolContext) -> dict[str, str]:
-    """Updates order state list with latest order status
-
-    Args:
-        order_status (OrderStatus): dict describing the current order status
-
-    Returns:
-        dict[str,str]: dict with message and status for the update action
-    """
 
     # get current list of orders
     current_order_state = getattr(tool_context.state, "ordering", {})
@@ -76,11 +59,38 @@ def update_order_state(order_status: OrderStatus, tool_context: ToolContext) -> 
     # update the state
     tool_context.state["ordering"]["order_status"] = current_order_statuses
 
-    # return update status
     return {
         "status": "success",
-        "message": f"order state updated with order id : {order_status.id}"
+        "message": "Order placed successfully",
+        "order_status": order_status
     }
+
+
+# def update_order_state(order_status: OrderStatus, tool_context: ToolContext) -> dict[str, str]:
+#     """Updates order state list with latest order status
+
+#     Args:
+#         order_status (OrderStatus): dict describing the current order status
+
+#     Returns:
+#         dict[str,str]: dict with message and status for the update action
+#     """
+
+#     # get current list of orders
+#     current_order_state = getattr(tool_context.state, "ordering", {})
+#     current_order_statuses = getattr(current_order_state, "order_status", [])
+
+#     # update list of orders
+#     current_order_statuses.append(order_status.model_dump())
+
+#     # update the state
+#     tool_context.state["ordering"]["order_status"] = current_order_statuses
+
+#     # return update status
+#     return {
+#         "status": "success",
+#         "message": f"order state updated with order id : {order_status.id}"
+#     }
 
 
 def update_order_confirmation_message(order_confirmation_message: dict[str, Any], tool_context: ToolContext) -> dict[str, str]:
@@ -94,7 +104,9 @@ def update_order_confirmation_message(order_confirmation_message: dict[str, Any]
     """
 
     # update the state
-    tool_context.state["ordering"]["confirmation"] = order_confirmation_message
+    current_order_state = getattr(tool_context.state, "ordering", {})
+    current_order_state["confirmation"] = order_confirmation_message
+    tool_context.state["ordering"] = current_order_state
 
     # return update status
     return {
@@ -144,7 +156,15 @@ meal_order_executor = LlmAgent(
     2. **Place the Order:**
        - Call the `place_food_order` tool with the restaurant ID and menu item ID.
        - Wait for the tool to return a success response/order ID.
-       - Use `update_order_state` to mark the order as 'PLACED'.
+       ** FOOD ORDER SCHEMA for `place_food_order` tool **
+       {
+           "id": "String restaurant id from where to order the food"
+           "order": [
+               "id": "menu item id to order",
+               "quantity": "integer for the quantity to order",
+               "customizations":["string list of customizations for the order"]
+           ]
+       }
 
     3. **Generate Confirmation (The Receipt):**
        - Once the order is confirmed, you must format the final output using the `update_order_confirmation_message` tool.
@@ -172,7 +192,7 @@ meal_order_executor = LlmAgent(
     - Double-check the price. Ensure `total_amount` equals the sum of the items.
     - ALWAYS delegate back to the parent `auto_nom_agent` agent after successfully saving the confirmation.
     """,
-    tools=[FunctionTool(update_order_state), FunctionTool(
+    tools=[FunctionTool(
         place_food_order), FunctionTool(update_order_confirmation_message)],
     before_agent_callback=on_before_meal_order_executor_agent_call,
     after_agent_callback=on_after_meal_order_executor_agent_call

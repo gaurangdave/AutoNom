@@ -1,5 +1,6 @@
 
 import uuid
+import json
 
 from google.adk.runners import Runner
 from google.adk.sessions import DatabaseSessionService
@@ -11,6 +12,7 @@ from src.auto_nom_agent.agents import root_agent
 from rich.console import Console
 from rich.panel import Panel
 from rich.markdown import Markdown
+from rich.syntax import Syntax
 from rich import box
 
 
@@ -190,11 +192,13 @@ class AutoNom():
         # user_input = f"Plan a {self.meal_type} for {self.user.name}"
         query = types.Content(role="user", parts=[
             types.Part(text=user_input)])
-
-        # Step 4: Run the agent
+        
+        
         async for event in self.runner.run_async(
             user_id=self.user.id, session_id=self.session_id, new_message=query
-        ):
+        ):                        
+            agent_name = event.author if hasattr(event, "author") else "System"
+            
             agent_name = event.author if hasattr(event, "author") else "System"
             response = self.__print_function_calls(
                 agent_name=agent_name, event=event)

@@ -22,7 +22,7 @@
   {
     "status": "AWAITING_USER_APPROVAL",
     "meaning": "Options sent. System paused for external signal.",
-    "action": "STOP execution immediately. Do not call any tools."
+    "action": "If the user has responded, Delegate to MealChoiceVerifier agent to process the response."
   },
   {
     "status": "USER_APPROVAL_RECEIVED",

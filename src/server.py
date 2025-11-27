@@ -407,11 +407,11 @@ async def get_user_active_session_state(user_id: str, session_id: str) -> dict[s
     Returns the complete session state including workflow_status and other state data.
     """
     try:
-        ServiceLogger.api_called_panel(
-            "GET",
-            f"/api/users/{user_id}/active-sessions/{session_id}/state",
-            params={"user_id": user_id, "session_id": session_id}
-        )
+        # ServiceLogger.api_called_panel(
+        #     "GET",
+        #     f"/api/users/{user_id}/active-sessions/{session_id}/state",
+        #     params={"user_id": user_id, "session_id": session_id}
+        # )
         
         # Check if user exists
         user = db_manager.get_user(user_id=user_id)

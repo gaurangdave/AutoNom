@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List
+from typing import Any, List
 
 
 class MenuItem(BaseModel):
@@ -40,7 +40,7 @@ class OrderStatus(BaseModel):
         description="ID for the restaurant from where the order was placed")
     # total_bill: float = Field(description="total bill amount for the order")
     status: str = Field(description="Current status for the order")
-    order: FoodOrder = Field(description="Detailed food order")
+    order: dict[str,Any] = Field(description="Detailed food order")
 
 
 class OrderState(BaseModel):
