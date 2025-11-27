@@ -32,7 +32,7 @@
   {
     "status": "USER_REJECTION_RECEIVED",
     "meaning": "User rejected options and provided feedback.",
-    "action": "Delegate to meal_planner."
+    "action": "Delegate to meal_planner agent to start over with user feedback in mind."
   },
   {
     "status": "PLACING_ORDER",

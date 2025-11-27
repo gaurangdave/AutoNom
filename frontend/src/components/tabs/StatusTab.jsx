@@ -8,6 +8,7 @@ import { useStatusStore } from '../../stores/statusStore';
 import StatusCard from '../status/StatusCard';
 import SelectionModal from '../status/SelectionModal';
 import SessionHistory from '../status/SessionHistory';
+import OrderConfirmationCard from '../status/OrderConfirmationCard';
 
 const StatusTab = () => {
   const { getCurrentUserId, activeSessionId, setActiveSessionId } = useUser();
@@ -144,7 +145,7 @@ const StatusTab = () => {
           setCelebrationMessage(latestEvent.text);
           setShowCelebration(true);
           setCelebrationShownForSession(latestEvent.session_id);
-          setTimeout(() => setShowCelebration(false), 10000);
+          setTimeout(() => setShowCelebration(false), 60000);
         }
       } else if (latestEvent.workflow_status === WORKFLOW_STATUS.MEAL_PLANNING_STARTED) {
         setStatusTitle('Planning Your Meal');
@@ -431,18 +432,19 @@ const StatusTab = () => {
 
       {/* Celebration Overlay */}
       {showCelebration && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-linear-to-br from-green-600 to-green-700 border border-green-500 rounded-2xl max-w-lg mx-4 p-8 text-center shadow-2xl transform celebration-bounce">
-            <div className="mb-4">
-              <PartyPopper className="mx-auto text-white" size={64} />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-linear-to-br from-green-600 to-green-700 border border-green-500 rounded-2xl max-w-2xl w-full mx-4 p-8 shadow-2xl transform celebration-bounce max-h-[90vh] overflow-y-auto">
+            <div className="mb-6 text-center">
+              <PartyPopper className="mx-auto text-white mb-3" size={64} />
+              <h3 className="text-3xl font-bold text-white mb-2">Order Confirmed! 🎉</h3>
+              <p className="text-green-100 text-sm">Your order has been successfully placed</p>
             </div>
-            <h3 className="text-2xl font-bold text-white mb-4">Order Confirmed! 🎉</h3>
-            <div className="bg-white/10 rounded-lg p-4 border border-white/20">
-              <p className="text-white text-lg leading-relaxed">{celebrationMessage}</p>
-            </div>
+            
+            <OrderConfirmationCard orderData={celebrationMessage} />
+            
             <button
               onClick={() => setShowCelebration(false)}
-              className="mt-6 bg-white text-green-700 font-bold px-6 py-3 rounded-lg hover:bg-green-50 transition-colors"
+              className="mt-6 w-full bg-white text-green-700 font-bold px-6 py-3 rounded-lg hover:bg-green-50 transition-colors"
             >
               👍 Awesome!
             </button>

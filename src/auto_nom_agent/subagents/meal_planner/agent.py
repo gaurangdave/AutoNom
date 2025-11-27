@@ -219,6 +219,10 @@ restaurant_scout_agent = LlmAgent(
             }
         ]
     }
+    ```    
+    **CRITICAL RULES:**
+    - ALWAYS delegate back to the parent `auto_nom_agent` agent after finishing your task.
+
     """,
     # output_schema=MealOptions,
     tools=[

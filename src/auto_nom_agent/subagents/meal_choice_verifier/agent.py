@@ -122,6 +122,7 @@ meal_choice_verifier = LlmAgent(
     **CRITICAL RULES:**
     - Do NOT simply print the options in markdown. You MUST use the tool to save the structured data.
     - Do NOT share internal IDs like 'r_001' in the `message` text.
+    - ALWAYS delegate back to the parent `auto_nom_agent` agent after finishing your task.
     """,
     tools=[
         FunctionTool(update_user_choice),

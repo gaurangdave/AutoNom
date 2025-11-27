@@ -30,7 +30,7 @@ def print_food_order(food_order: FoodOrder):
                       ",".join(order_items.customizations))
 
 
-def place_food_order(food_order: FoodOrder) -> dict[str, Any]:
+def place_food_order(food_order: FoodOrder, tool_context: ToolContext) -> dict[str, Any]:
     """Places the food order with the restaurant and returns the order status
 
     Args:
@@ -81,7 +81,7 @@ def update_order_state(order_status: OrderStatus, tool_context: ToolContext) -> 
         "message": f"order state updated with order id : {order_status.id}"
     }
 
-def update_order_confirmation_message(order_confirmation_message: str, tool_context: ToolContext) -> dict[str, str]:
+def update_order_confirmation_message(order_confirmation_message: dict[str, Any], tool_context: ToolContext) -> dict[str, str]:
     """Updates order state list with latest order status
 
     Args:
@@ -109,7 +109,6 @@ def on_before_meal_order_executor_agent_call(callback_context: CallbackContext) 
 
     return None
 
-
 def on_after_meal_order_executor_agent_call(callback_context: CallbackContext) -> None:
     current_state = callback_context.state["workflow_status"]
     new_state = "ORDER_CONFIRMED"
@@ -123,31 +122,51 @@ def on_after_meal_order_executor_agent_call(callback_context: CallbackContext) -
 meal_order_executor = LlmAgent(
     model=Gemini(model=model, retry_options=retry_options),
     name="MealOrderExecutor",
-    description="Orders food from restaurant based on user preferences and chooses restaurant",
+    description="Specialized agent that executes the final food order based on user selection and preferences.",
     instruction="""
-    You are a diligent and detailed agent who orders meals for the user.
-    Your role is to use the meal information below and place one or more orders using the `place_food_order` tool.
-    
-    ** Meal Information ** 
-    *** User Preferences ***
-    Dietary Preferences : {user_dietary_preferences}
-    Allergies : {user_allergies}
-    
-    *** Restaurant List ***
-    This is the list of available restaurant and menu items
-    {meal_options}
-    
-    *** User Choice ***
-    This is the list of choices that user made
-    {user_choice}
+    You are a diligent and detail-oriented ordering agent. Your sole responsibility is to take the finalized meal choice and execute the order.
 
-    ** Your Duties **
-    * Step 1: Extract the required order information from the meal information.
-        * REMEMBER items from the same restaurant will be part of same order.
-    * Step 2: Use `place_food_order` to place each order one at a time.
-        * At the end of each order save the response using `update_order_state` tool.    
-    * Step 3: Once all the orders are placed, create a friendly message summarizing the order for the user and use the `update_order_confirmation_message` tool to save the message.
-    * Your task is done delegate back to the parent `auto_nom` agent.
+    **INPUT CONTEXT:**
+    - **User Preferences:** {user_dietary_preferences}
+    - **Allergies (CRITICAL):** {user_allergies}
+    - **Available Options:** {meal_options}
+    - **User Selection:** {user_choice} (This is the index or ID of the chosen meal)
+
+    **EXECUTION PLAN:**
+    
+    1. **Identify the Meal:** - Locate the specific restaurant and menu item corresponding to the `{user_choice}` from the `{meal_options}` list.
+       - *Validation:* Ensure the item does not conflict with `{user_allergies}`. If it does, STOP and ask for clarification (though this should have been caught earlier).
+
+    2. **Place the Order:**
+       - Call the `place_food_order` tool with the restaurant ID and menu item ID.
+       - Wait for the tool to return a success response/order ID.
+       - Use `update_order_state` to mark the order as 'PLACED'.
+
+    3. **Generate Confirmation (The Receipt):**
+       - Once the order is confirmed, you must format the final output using the `update_order_confirmation_message` tool.
+       - You need to calculate the **Total Bill** (Price + simulated Tax/Tip, or just Price).
+       - **Payload Structure:**
+         - `message`: A friendly, celebratory text (e.g., "Great choice! Your meal is being prepared.").
+         - `bill`: A structured JSON object containing the line items.
+
+    **CONFIRMATION SCHEMA (for `update_order_confirmation_message`):**
+    The `bill` argument must match this structure:
+    {
+        "restaurant_name": "String",
+        "items": [
+            {
+                "name": "String (Menu Item Name)",
+                "quantity": 1,
+                "price": Number (Float),
+                "customizations" : "String (Any customizations that you have requested)
+            }
+        ],
+        "total_amount": Number (Float)
+    }
+
+    **CRITICAL RULES:**
+    - Double-check the price. Ensure `total_amount` equals the sum of the items.
+    - ALWAYS delegate back to the parent `auto_nom_agent` agent after successfully saving the confirmation.
     """,
     tools=[FunctionTool(update_order_state), FunctionTool(
         place_food_order), FunctionTool(update_order_confirmation_message)],
