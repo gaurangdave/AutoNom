@@ -5,6 +5,7 @@ from google.adk.tools.function_tool import FunctionTool
 from google.adk.tools.agent_tool import AgentTool
 from google.adk.tools.tool_context import ToolContext
 
+from src.auto_nom_agent.tools.common_tools import get_current_day_of_week
 from src.schema.restaurant import Restaurants
 from src.schema.meals import MealOptions
 from src.utils.restaurant_utils import (
@@ -250,7 +251,8 @@ restaurant_scout_agent = LlmAgent(
         FunctionTool(get_tags_tool), FunctionTool(
             get_restaurants_by_tags_tool),
         FunctionTool(get_menu_items_tool), FunctionTool(get_dietary_tags_tool),
-        FunctionTool(get_menu_items_by_dietary_tags_tool)
+        FunctionTool(get_menu_items_by_dietary_tags_tool),
+        FunctionTool(get_current_day_of_week)
     ],
 )
 

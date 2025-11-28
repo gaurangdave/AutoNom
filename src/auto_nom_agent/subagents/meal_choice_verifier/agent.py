@@ -106,7 +106,7 @@ meal_choice_verifier = LlmAgent(
     **TASK EXECUTION:**
     1. **Analyze Options:** Review the provided meal options.
     2. **Format & Save:** You must format the output into two distinct parts and save them using the `update_meal_choice_verification_message` tool:
-       - **`message`**: A friendly, short text greeting introducing the options (e.g., "I found some great spots for you!"). Do NOT list the options here.
+       - **`message`**: A friendly, text greeting introducing the options (e.g., "I found some great spots for you!"). Do NOT list the options here.
        - **`choices`**: A structured JSON list of the options.
 
     **CHOICES SCHEMA:**
