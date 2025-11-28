@@ -61,9 +61,13 @@ export const SessionProvider = ({ children }) => {
           
           // Auto-set active session if none is currently set
           if (!activeSessionId) {
-            // Find the latest session that's not ORDER_CONFIRMED
+            // Find the latest session that's not in a terminal state (ORDER_CONFIRMED or NO_PLANNING_NEEDED)
             const latestActiveSession = sortedSessions.find(
-              session => getWorkflowStatus(session) !== WORKFLOW_STATUS.ORDER_CONFIRMED
+              session => {
+                const status = getWorkflowStatus(session);
+                return status !== WORKFLOW_STATUS.ORDER_CONFIRMED && 
+                       status !== WORKFLOW_STATUS.NO_PLANNING_NEEDED;
+              }
             );
             
             if (latestActiveSession) {
@@ -206,6 +210,16 @@ export const SessionProvider = ({ children }) => {
             
             // Stop session state polling once order is confirmed
             logger.log('Order confirmed, stopping session state polling');
+            if (pollIntervalRef.current) {
+              clearInterval(pollIntervalRef.current);
+              pollIntervalRef.current = null;
+            }
+            
+            // Clear active session so history polling can resume
+            setActiveSessionId(null);
+          } else if (workflowStatus === WORKFLOW_STATUS.NO_PLANNING_NEEDED) {
+            // Stop session state polling - no planning needed is a terminal state
+            logger.log('No planning needed, stopping session state polling');
             if (pollIntervalRef.current) {
               clearInterval(pollIntervalRef.current);
               pollIntervalRef.current = null;

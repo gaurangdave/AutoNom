@@ -61,6 +61,7 @@ export const getWorkflowProgress = (status) => {
     [WORKFLOW_STATUS.PLACING_ORDER]: 75,
     [WORKFLOW_STATUS.ORDER_EXECUTION_STARTED]: 75,
     [WORKFLOW_STATUS.ORDER_CONFIRMED]: 100,
+    [WORKFLOW_STATUS.NO_PLANNING_NEEDED]: 100,
     [WORKFLOW_STATUS.COMPLETED]: 100,
     [WORKFLOW_STATUS.ERROR]: 0
   };
@@ -118,6 +119,11 @@ export const getStatusDisplay = (status) => {
     [WORKFLOW_STATUS.ORDER_CONFIRMED]: {
       title: 'Order Confirmed! 🎉',
       subtitle: 'Your meal has been successfully ordered',
+      isActive: false
+    },
+    [WORKFLOW_STATUS.NO_PLANNING_NEEDED]: {
+      title: 'No Planning Needed',
+      subtitle: 'No meal planning is required at this time',
       isActive: false
     },
     [WORKFLOW_STATUS.COMPLETED]: {

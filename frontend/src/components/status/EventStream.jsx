@@ -28,6 +28,9 @@ const EventStream = ({ events }) => {
       if (event.workflow_status === 'ORDER_CONFIRMED') {
         return 'Order Confirmed! 🎉';
       }
+      if (event.workflow_status === 'NO_PLANNING_NEEDED') {
+        return 'No Planning Needed';
+      }
       return 'Agent Response';
     }
     return event.type || 'Event';
@@ -53,6 +56,9 @@ const EventStream = ({ events }) => {
   const getEventBgColor = (event) => {
     if (event.workflow_status === 'ORDER_CONFIRMED') {
       return 'bg-green-500/10 border-green-500/30';
+    }
+    if (event.workflow_status === 'NO_PLANNING_NEEDED') {
+      return 'bg-blue-500/10 border-blue-500/30';
     }
     if (event.workflow_status === 'AWAITING_USER_APPROVAL') {
       return 'bg-yellow-500/10 border-yellow-500/30';
