@@ -8,6 +8,7 @@ from google.adk.sessions import DatabaseSessionService
 from google.adk.events import Event
 from google.genai import types
 from typing import Any
+from pydantic import BaseModel, Field
 from src.auto_nom_agent.agents import root_agent
 
 from rich.console import Console
@@ -34,31 +35,50 @@ SRC_ROOT = CURRENT_FILE_DIR.parent
 DB_DIR = SRC_ROOT / "db" / "data"
 DB_FILE = DB_DIR / "autonom.db"
 
+
+class SessionState(BaseModel):
+    """Pydantic model for session state structure"""
+    workflow_status: str = Field(default="IDLE")
+    planning_meal_type: str = Field(default="")
+    planning_options: list[Any] = Field(default_factory=list)
+    user_id: str = Field(default="")
+    user_name: str = Field(default="")
+    user_dietary_preferences: str = Field(default="")
+    user_allergies: list[str] = Field(default_factory=list)
+    user_special_instructions: str = Field(default="")
+    verification_user_feedback: str = Field(default="")
+    verification_user_choice: str = Field(default="")
+    verification_message: str = Field(default="")
+    verification_choices: list[Any] = Field(default_factory=list)
+    ordering_order_status_id: str = Field(default="")
+    ordering_order_status_restaurant_id: str = Field(default="")
+    ordering_order_status_status: str = Field(default="")
+    ordering_order_status_order: dict[str, Any] = Field(default_factory=dict)
+    ordering_confirmation_message: str = Field(default="")
+    ordering_confirmation_bill_restaurant_name: str = Field(default="")
+    ordering_confirmation_bill_items: list[Any] = Field(default_factory=list)
+    ordering_confirmation_bill_total_amount: str = Field(default="")
+
+
 class AutoNom():
     def __init__(self, user: UserProfile, meal_type: str = "", session_id: str = ""):
         self._app_name = "auto_nom_agent"
         self.user = user
         self.meal_type = meal_type
-        self.initial_state: dict[str, Any] = {
-            "workflow_status": "IDLE",
-            "planning_meal_type": meal_type,
-            "planning_options":[],
-            "user_id": user.id,
-            "user_name": user.name,
-            "user_dietary_preferences": ",".join(user.preferences),
-            "user_allergies": user.allergies,
-            "user_special_instructions": user.special_instructions,
-            "verification_user_feedback":"",
-            "verification_user_choice":"",
-            "verification_message":"",
-            "verification_choices":[],
-            
-            # "retries":{
-            #     "meal_planner": 0,
-            #     "meal_choice_verifier": 0,
-            #     "meal_order_executor": 0
-            # }
-        }
+        
+        # Create state using Pydantic model with user-specific values
+        state_model = SessionState(
+            workflow_status="IDLE",
+            planning_meal_type=meal_type,
+            user_id=user.id,
+            user_name=user.name,
+            user_dietary_preferences=",".join(user.preferences),
+            user_allergies=user.allergies,
+            user_special_instructions=user.special_instructions
+        )
+        
+        # Convert to dict for use with session service
+        self.initial_state: dict[str, Any] = state_model.model_dump()
         self.session_id = session_id if session_id else str(uuid.uuid4())
 
         ServiceLogger.log_info(
