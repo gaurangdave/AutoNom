@@ -34,11 +34,12 @@ auto_nom_agent = LlmAgent(
 
     **USER CONTEXT:**
     - Name: {{user_name}}
-    - Task: Plan a {{planning_meal_type}} for {{user_name}}
-    
+    - Task: Plan a {{planning_meal_type}} for {{user_name}}    
     - **Dietary Preferences:** {{user_dietary_preferences}}
     - **Allergies (CRITICAL):** {{user_allergies}}
     - **Special Instructions: ** {{user_special_instructions}}
+    - **User Meal Schedule** {{user_meal_schedule}}
+    
 
 
     **CURRENT STATE:**

@@ -12,20 +12,28 @@ export const transformAPIUserToFrontend = (apiUser) => {
   if (!apiUser) return null;
   
   // Convert schedule.days array to boolean array [Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday]
-  // API format uses unambiguous identifiers: "m", "tu", "w", "th", "f", "sa", "su"
-  // For backwards compatibility with old data, support ambiguous single-letter formats
+  // API format uses full day names: "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
+  // For backwards compatibility with old data, support abbreviated formats
   const scheduleBooleans = [false, false, false, false, false, false, false];
   
   if (apiUser.schedule?.days && Array.isArray(apiUser.schedule.days)) {
-    // Map day abbreviations to indices (Monday=0, Sunday=6)
+    // Map day names/abbreviations to indices (Monday=0, Sunday=6)
     const dayMap = { 
-      'm': 0,      // Monday
-      'tu': 1,     // Tuesday
-      'w': 2,      // Wednesday
-      'th': 3,     // Thursday
-      'f': 4,      // Friday
-      'sa': 5,     // Saturday
-      'su': 6      // Sunday
+      'monday': 0,
+      'tuesday': 1,
+      'wednesday': 2,
+      'thursday': 3,
+      'friday': 4,
+      'saturday': 5,
+      'sunday': 6,
+      // Legacy abbreviations for backward compatibility
+      'm': 0,
+      'tu': 1,
+      'w': 2,
+      'th': 3,
+      'f': 4,
+      'sa': 5,
+      'su': 6
     };
     
     // Track ambiguous 't' values for backward compatibility with old database data
@@ -84,10 +92,10 @@ export const transformAPIUserToFrontend = (apiUser) => {
 export const transformFrontendUserToAPI = (frontendUser) => {
   if (!frontendUser) return null;
   
-  // Convert boolean array to unambiguous day identifiers
+  // Convert boolean array to full day names
   // Frontend: [Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday]
-  // API: ["m", "tu", "w", "th", "f", "sa", "su"]
-  const dayNames = ['m', 'tu', 'w', 'th', 'f', 'sa', 'su'];
+  // API: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const selectedDays = [];
   frontendUser.schedule.forEach((isSelected, index) => {
     if (isSelected) {

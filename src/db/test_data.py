@@ -12,7 +12,7 @@ FITNESS_FIONA = UserProfile(
     preferences=["High-Protein", "Low-Calorie"],
     allergies=[],
     schedule={
-        "days": ["m", "tu", "w", "th", "f"],
+        "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
         "meals": [
             {
                 "id": 1001,
@@ -43,7 +43,7 @@ OFFICE_MANAGER_MIKE = UserProfile(
     preferences=["Variety"],
     allergies=["Gluten", "Peanuts"],
     schedule={
-        "days": ["m", "tu", "w", "th", "f"],
+        "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
         "meals": [
             {
                 "id": 2001,
@@ -67,7 +67,7 @@ LATE_NIGHT_LARRY = UserProfile(
     preferences=["Greasy", "Comforting", "Spicy"],
     allergies=[],
     schedule={
-        "days": ["m", "tu", "w", "th", "f", "sa", "su"],
+        "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
         "meals": [
             {
                 "id": 3001,

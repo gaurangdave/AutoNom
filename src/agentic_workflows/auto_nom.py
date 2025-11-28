@@ -43,6 +43,7 @@ class SessionState(BaseModel):
     planning_options: list[Any] = Field(default_factory=list)
     user_id: str = Field(default="")
     user_name: str = Field(default="")
+    user_meal_schedule: str = Field(default="")
     user_dietary_preferences: str = Field(default="")
     user_allergies: list[str] = Field(default_factory=list)
     user_special_instructions: str = Field(default="")
