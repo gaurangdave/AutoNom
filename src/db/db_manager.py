@@ -22,25 +22,52 @@ def get_db_path():
 
 def init_db(preload_test_users: bool = False) -> None:
     with get_connection() as conn:
-        # Users Table - UPDATED with 'schedule' and 'special_instructions' columns
+        # Users Table - UPDATED with separate 'days', 'meals', and 'special_instructions' columns
         conn.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             preferences TEXT, -- JSON string
             allergies TEXT,   -- JSON string
-            schedule TEXT,    -- JSON string (Stores days and meal slots)
+            days TEXT,        -- JSON string (List of day names)
+            meals TEXT,       -- JSON string (List of meal objects)
             special_instructions TEXT, -- Text instructions from user
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         """)
         
-        # Add special_instructions column if it doesn't exist (for existing databases)
+        # Migration: Add new columns if they don't exist (for existing databases)
         try:
             conn.execute("ALTER TABLE users ADD COLUMN special_instructions TEXT")
         except sqlite3.OperationalError:
-            # Column already exists, ignore the error
-            pass
+            pass  # Column already exists
+        
+        try:
+            conn.execute("ALTER TABLE users ADD COLUMN days TEXT")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+        
+        try:
+            conn.execute("ALTER TABLE users ADD COLUMN meals TEXT")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+        
+        # Migration: Convert old schedule column data to new days/meals columns
+        try:
+            rows = conn.execute("SELECT id, schedule FROM users WHERE schedule IS NOT NULL AND (days IS NULL OR meals IS NULL)").fetchall()
+            for row in rows:
+                try:
+                    schedule = json.loads(row['schedule'])
+                    days = json.dumps(schedule.get('days', []))
+                    meals = json.dumps(schedule.get('meals', []))
+                    conn.execute(
+                        "UPDATE users SET days = ?, meals = ? WHERE id = ?",
+                        (days, meals, row['id'])
+                    )
+                except (json.JSONDecodeError, KeyError):
+                    continue
+        except sqlite3.OperationalError:
+            pass  # schedule column doesn't exist or other error
         # Sessions Table
         conn.execute("""
         CREATE TABLE IF NOT EXISTS sessions (
@@ -90,15 +117,16 @@ def upsert_user(user_profile: UserProfile) -> None:
         with get_connection() as conn:
             conn.execute(
                 """
-                INSERT OR REPLACE INTO users (id, name, preferences, allergies, schedule, special_instructions) 
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT OR REPLACE INTO users (id, name, preferences, allergies, days, meals, special_instructions) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     user_profile.id,
                     user_profile.name,
                     json.dumps(user_profile.preferences),
                     json.dumps(user_profile.allergies),
-                    json.dumps(user_profile.schedule),
+                    json.dumps(user_profile.days),
+                    json.dumps(user_profile.meals),
                     user_profile.special_instructions
                 )
             )
@@ -108,17 +136,23 @@ def upsert_user(user_profile: UserProfile) -> None:
         raise
 
 
-def upsert_user_legacy(user_id: str, name: str, preferences: Any, allergies: Any, schedule: Any, special_instructions: str = "") -> None:
+def upsert_user_legacy(user_id: str, name: str, preferences: Any, allergies: Any, schedule: Any = None, days: Any = None, meals: Any = None, special_instructions: str = "") -> None:
     """
     Legacy function for backwards compatibility. Creates or updates a user profile.
     Consider migrating to upsert_user() which uses UserProfile Pydantic model.
     """
+    # Handle legacy schedule format
+    if schedule and not days and not meals:
+        days = schedule.get('days', [])
+        meals = schedule.get('meals', [])
+    
     user_profile = UserProfile(
         id=user_id,
         name=name,
-        preferences=preferences,
-        allergies=allergies,
-        schedule=schedule,
+        preferences=preferences or [],
+        allergies=allergies or [],
+        days=days or [],
+        meals=meals or [],
         special_instructions=special_instructions
     )
     upsert_user(user_profile)
@@ -134,16 +168,23 @@ def get_all_users() -> List[UserProfile]:
                 # Parse JSON fields back to objects
                 preferences: List[str] = json.loads(u['preferences']) if u['preferences'] else []
                 allergies: List[str] = json.loads(u['allergies']) if u['allergies'] else []
-                schedule: Dict[str, Any] = json.loads(u['schedule']) if u['schedule'] else {}
-                special_instructions: str = u.get('special_instructions') or ""
+                days: List[str] = json.loads(u['days']) if u.get('days') else []
+                meals: List[Dict[str, Any]] = json.loads(u['meals']) if u.get('meals') else []
+                
+                # Handle legacy schedule column for backward compatibility
+                if not days and not meals and u.get('schedule'):
+                    schedule = json.loads(u['schedule'])
+                    days = schedule.get('days', [])
+                    meals = schedule.get('meals', [])
                 
                 user_profile = UserProfile(
                     id=u['id'],
                     name=u['name'],
                     preferences=preferences,
                     allergies=allergies,
-                    schedule=schedule,
-                    special_instructions=special_instructions
+                    days=days,
+                    meals=meals,
+                    special_instructions=u.get('special_instructions', '')
                 )
                 users.append(user_profile)
             
@@ -162,16 +203,23 @@ def get_user(user_id: str) -> Optional[UserProfile]:
                 # Parse JSON fields back to objects
                 preferences: List[str] = json.loads(u['preferences']) if u['preferences'] else []
                 allergies: List[str] = json.loads(u['allergies']) if u['allergies'] else []
-                schedule: Dict[str, Any] = json.loads(u['schedule']) if u['schedule'] else {}
-                special_instructions: str = u.get('special_instructions') or ""
+                days: List[str] = json.loads(u['days']) if u.get('days') else []
+                meals: List[Dict[str, Any]] = json.loads(u['meals']) if u.get('meals') else []
+                
+                # Handle legacy schedule column for backward compatibility
+                if not days and not meals and u.get('schedule'):
+                    schedule = json.loads(u['schedule'])
+                    days = schedule.get('days', [])
+                    meals = schedule.get('meals', [])
                 
                 user_profile = UserProfile(
                     id=u['id'],
                     name=u['name'],
                     preferences=preferences,
                     allergies=allergies,
-                    schedule=schedule,
-                    special_instructions=special_instructions
+                    days=days,
+                    meals=meals,
+                    special_instructions=u.get('special_instructions', '')
                 )
                 return user_profile
             return None

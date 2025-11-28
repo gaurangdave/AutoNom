@@ -9,8 +9,14 @@ class UserProfile(BaseModel):
     name: str
     preferences: list[str] = []
     allergies: list[str] = []
-    schedule: Dict[str, Any] = {}
+    days: list[str] = []  # List of day names: ["Monday", "Tuesday", etc.]
+    meals: list[Dict[str, Any]] = []  # List of meal objects
     special_instructions: str = ""
+    
+    # Backward compatibility property for code that expects schedule
+    @property
+    def schedule(self) -> Dict[str, Any]:
+        return {"days": self.days, "meals": self.meals}
 
 
 class Session(BaseModel):

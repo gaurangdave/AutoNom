@@ -96,8 +96,8 @@ async def create_user(user: UserProfile) -> UserProfile:
             f"[cyan]Name:[/cyan] {user.name}\n"
             f"[cyan]Preferences:[/cyan] {', '.join(user.preferences) if user.preferences else 'None'}\n"
             f"[cyan]Allergies:[/cyan] {', '.join(user.allergies) if user.allergies else 'None'}\n"
-            f"[cyan]Schedule Days:[/cyan] {', '.join(user.schedule.get('days', [])) if user.schedule else 'None'}\n"
-            f"[cyan]Meal Slots:[/cyan] {len(user.schedule.get('meals', [])) if user.schedule else 0} meals\n"
+            f"[cyan]Days:[/cyan] {', '.join(user.days) if user.days else 'None'}\n"
+            f"[cyan]Meal Slots:[/cyan] {len(user.meals)} meals\n"
             f"[cyan]Special Instructions:[/cyan] {user.special_instructions or 'None'}",
             "blue"
         )
