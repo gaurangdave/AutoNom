@@ -8,6 +8,6 @@ retry_options = types.HttpRetryOptions(
     http_status_codes=[429, 500, 503, 504],  # Retry on these HTTP errors
 )
 
-model =  "gemini-2.5-flash" # "gemini-2.5-pro"
+model =  "gemini-2.5-pro" # "gemini-2.5-pro"
 gemini_flash = "gemini-2.5-flash"
 gemini_pro = "gemini-2.5-pro"
