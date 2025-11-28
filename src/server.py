@@ -23,7 +23,7 @@ console = Console()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    db_manager.init_db()
+    db_manager.init_db(preload_test_users=True)
     ServiceLogger.startup_message("Auto-Nom API", port=8000)
     ServiceLogger.log_success("Database initialized successfully")
 

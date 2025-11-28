@@ -17,6 +17,9 @@ COPY utils/ ./utils/
 # Copy the rest of the code
 COPY . .
 
+RUN mkdir -p /app/src/db/data && \
+    chmod 777 /app/src/db/data
+
 # Make port 8000 available to the world outside this container
 EXPOSE 8000
 

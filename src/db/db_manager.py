@@ -17,8 +17,10 @@ def get_connection() -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL;")
     return conn
 
+def get_db_path():
+    return DB_PATH
 
-def init_db() -> None:
+def init_db(preload_test_users: bool = False) -> None:
     with get_connection() as conn:
         # Users Table - UPDATED with 'schedule' and 'special_instructions' columns
         conn.execute("""
@@ -68,6 +70,14 @@ def init_db() -> None:
             location=str(DB_PATH),
             tables="users, orders"
         )
+        
+    # Preload test users if requested
+    if preload_test_users:
+        from src.db.test_data import get_test_users
+        test_users = get_test_users()
+        for user in test_users:
+            upsert_user(user)
+        ServiceLogger.log_success(f"Preloaded {len(test_users)} test users", "DB")
 
 # --- User Helpers ---
 
@@ -413,4 +423,4 @@ def delete_all_sessions() -> int:
 
 
 if __name__ == "__main__":
-    init_db()
+    init_db(preload_test_users=True)

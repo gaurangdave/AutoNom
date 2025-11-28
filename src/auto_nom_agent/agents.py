@@ -23,6 +23,10 @@ auto_nom_agent = LlmAgent(
 
     **USER CONTEXT:**
     - Name: {{user.name}}
+    - **Dietary Preferences:** {{user.dietary_preferences}}
+    - **Allergies (CRITICAL):** {{user.allergies}}
+    - **Special Instructions: ** {{user.special_instructions}}
+
 
     **CURRENT STATE:**
     workflow_status: {{workflow_status}}

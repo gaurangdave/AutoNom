@@ -1,6 +1,7 @@
 
 import uuid
 import json
+from pathlib import Path
 
 from google.adk.runners import Runner
 from google.adk.sessions import DatabaseSessionService
@@ -21,6 +22,17 @@ from src.schema.users import UserProfile
 from utils.logger import ServiceLogger
 console = Console()
 
+# 1. Get the directory of the current file (inside src/agentic_workflows)
+CURRENT_FILE_DIR = Path(__file__).resolve().parent
+
+# 2. Go up one level to 'src'
+#    .parent of 'agentic_workflows' is 'src'
+SRC_ROOT = CURRENT_FILE_DIR.parent
+
+# 3. Construct the path to the DB folder
+#    Target: src/db
+DB_DIR = SRC_ROOT / "db" / "data"
+DB_FILE = DB_DIR / "autonom.db"
 
 class AutoNom():
     def __init__(self, user: UserProfile, meal_type: str = "", session_id: str = ""):
@@ -53,7 +65,9 @@ class AutoNom():
         ServiceLogger.log_info(
             f"Initialized AutoNom for user {self.user.id}, with session : {self.session_id}")
         # private properties # database url
-        self.__db_url = "sqlite:///./src/db/data/autonom.db"
+        self.__db_url = f"sqlite+aiosqlite:///{DB_FILE}"
+        print(f"📍 Database path resolved to: {DB_FILE}")
+        print(f"🔌 Async URL: {self.__db_url}")
         # setting db session service for persistent storage
         self.__session_service = DatabaseSessionService(db_url=self.__db_url)
 
@@ -196,7 +210,7 @@ class AutoNom():
         
         async for event in self.runner.run_async(
             user_id=self.user.id, session_id=self.session_id, new_message=query
-        ):                        
+        ):
             agent_name = event.author if hasattr(event, "author") else "System"
             
             agent_name = event.author if hasattr(event, "author") else "System"
