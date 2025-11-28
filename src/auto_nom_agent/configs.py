@@ -9,3 +9,5 @@ retry_options = types.HttpRetryOptions(
 )
 
 model =  "gemini-2.5-flash" # "gemini-2.5-pro"
+gemini_flash = "gemini-2.5-flash"
+gemini_pro = "gemini-2.5-pro"

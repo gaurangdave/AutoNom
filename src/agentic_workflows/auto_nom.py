@@ -40,20 +40,19 @@ class AutoNom():
         self.user = user
         self.meal_type = meal_type
         self.initial_state: dict[str, Any] = {
-            "user": {
-                "id": user.id,
-                "name": user.name,
-                "dietary_preferences": ",".join(user.preferences),
-                "allergies": user.allergies,
-                "special_instructions": user.special_instructions
-            },
             "workflow_status": "IDLE",
-            "planning": {
-                "meal_type": meal_type,
-                "options":[],
-            },
-            "verification":{},
-            "ordering":{}
+            "planning_meal_type": meal_type,
+            "planning_options":[],
+            "user_id": user.id,
+            "user_name": user.name,
+            "user_dietary_preferences": ",".join(user.preferences),
+            "user_allergies": user.allergies,
+            "user_special_instructions": user.special_instructions,
+            "verification_user_feedback":"",
+            "verification_user_choice":"",
+            "verification_message":"",
+            "verification_choices":[],
+            
             # "retries":{
             #     "meal_planner": 0,
             #     "meal_choice_verifier": 0,

@@ -18,7 +18,7 @@ from src.utils.restaurant_utils import (
     get_dietary_tags,
     get_menu_items_by_dietary_tags
 )
-from src.auto_nom_agent.configs import retry_options, model
+from src.auto_nom_agent.configs import retry_options, model,gemini_pro
 from google.adk.models.google_llm import Gemini
 from google.adk.agents.callback_context import CallbackContext
 
@@ -141,22 +141,30 @@ def get_menu_items_by_dietary_tags_tool(tool_context: ToolContext, tags: list[st
 
 
 restaurant_scout_agent = LlmAgent(
-    model=Gemini(model=model, retry_options=retry_options),
+    model=Gemini(model=gemini_pro, retry_options=retry_options),
     name="restaurant_scout_agent",
-    description="Specialized researcher agent that queries external tools to find and select 3 optimal restaurant options based on specific user criteria.",
+    description="Specialized researcher agent that queries external tools to find and at least 3 optimal restaurant options based on specific user criteria.",
     instruction="""
     You are an expert Restaurant Scout Agent. Your goal is to research, filter, and select at least 3 distinct meal options that best match the user's specific needs.
 
     **CONTEXT:**
-    You are processing a request for a specific user. You must strictly adhere to their preferences absolutely.
+    You are processing a request to plan {planning_meal_type} for {user_name}. You must strictly adhere to their preferences, allergies and special instructions absolutely. 
+    User preferences are below.
+    IMPORTANT Please confirm you can see these preferences
+
     ** User Preferences **
-    - **Dietary Preferences:** {user.dietary_preferences}
-    - **Allergies (CRITICAL):** {user.allergies}
-    - **Special Instructions: ** {user.special_instructions}
+    - **Dietary Preferences:** 
+    {user_dietary_preferences}
+    
+    - **Allergies :** 
+    {user_allergies}
+    
+    - **Special Instructions: ** 
+    {user_special_instructions}
     
     
-    - **History:** {planning.options} (Do not repeat recent suggestions if possible)
-    - **Recent Feedback:** {verification.user_feedback} (Use this to adjust your search strategy)
+    - **History:** {planning_options} (Do not repeat recent suggestions if possible)
+    - **Recent Feedback:** {verification_user_feedback} (Use this to adjust your search strategy)
 
     **AVAILABLE TOOLS & USE CASES:**
     You have access to the following tools. Use them strategically to narrow down options efficiently.
@@ -197,7 +205,7 @@ restaurant_scout_agent = LlmAgent(
        - *Constraint:* Do not suggest a restaurant if you cannot find at least one compliant meal item.
 
     3. **Selection:**
-       - Select exactly 3 distinct options. 
+       - Select at least 3 distinct options. 
        - Aim for variety (e.g., one salad, one warm meal, one "fun" option) unless the user requested something specific.
 
     4. **Final Output:**
@@ -251,7 +259,7 @@ def update_meal_options(options: MealOptions, tool_context: ToolContext) -> dict
     Returns:
         dict[str,str]: response dictionary with update operation status and message
     """
-    tool_context.state["planning"]["meal_options"] = options.model_dump()
+    tool_context.state["planning_options"] = options.model_dump()
 
     return {
         "status": "success",
@@ -274,7 +282,7 @@ def on_after_meal_planner_agent_call(callback_context: CallbackContext) -> None:
     new_state = "MEAL_PLANNING_COMPLETE"
 
     # verify if we have meal options
-    meal_options = callback_context.state["planning"]["meal_options"]
+    meal_options = getattr(callback_context.state, "planning_options", [])
     # options = meal_options.get("options", [])
 
     if meal_options and len(meal_options) == 0:
@@ -289,27 +297,40 @@ def on_after_meal_planner_agent_call(callback_context: CallbackContext) -> None:
 meal_planner = LlmAgent(
     model=Gemini(model=model, retry_options=retry_options),
     name="MealPlanner",
-    description="Scans various restaurant options and generates choice of 3 options",
+    description="Scans various restaurant options and generates choice of at least 3 options",
     instruction="""
     You are a creative and diligent meal planner. 
     Your role is to plan a perfect next meal for the user.
     To do that you have access to following agent and tools
-    * `restaurant_scout_agent` tool that will research and return 3 restaurants based on user preferences and feedback.        
+    * `restaurant_scout_agent` tool that will research and return at least 3 restaurants based on user preferences and feedback.        
 
     ** Your Duties **
     * Step 0: Welcome the user and inform them that you are finding restaurants for them in an exciting manner. 
     * Step 1: Use the `restaurant_scout_agent` tool to get the list of restaurants for the user.
     * Step 2: IMPORTANT after getting the list of restaurants use the `update_meal_options` tool to save the options for the user. DO NOT SKIP THIS STEP
     * Step 3: After updating the state, your task is done. Delegate back to parent `auto_nom_agent` agent.
+    
+    ** User Preferences **
+    - **Dietary Preferences:** 
+    {user_dietary_preferences}
+    
+    - **Allergies :** 
+    {user_allergies}
+    
+    - **Special Instructions: ** 
+    {user_special_instructions}
+
+    
+    
     ** Current Workflow Status **
     {workflow_status}
     
     ** User Feedback **
     Previously Shared Options:
-    {planning.options}
+    {planning_options}
     
     Feedback on previous options:
-    {verification.user_feedback}
+    {verification_user_feedback}
     
     """,
     tools=[AgentTool(restaurant_scout_agent), FunctionTool(

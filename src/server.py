@@ -258,6 +258,59 @@ async def resume_workflow(session_id: str, req: ResumeRequest, streaming: bool =
 
 
 
+def transform_state_to_client_format(flat_state: dict[str, Any]) -> dict[str, Any]:
+    """
+    Transform flat session state to nested client format.
+    Maps keys like 'user_name', 'planning_meal_type', etc. to nested structure.
+    """
+    client_state: dict[str, Any] = {
+        "user": {},
+        "workflow_status": flat_state.get("workflow_status", "IDLE"),
+        "planning": {},
+        "verification": {},
+        "ordering": {
+            "order_status": {},
+            "confirmation": {
+                "bill": {}
+            }
+        }
+    }
+    
+    # Map each flat key to the appropriate nested location
+    for key, value in flat_state.items():
+        if key.startswith("user_"):
+            # Extract the attribute name after "user_"
+            attr = key.replace("user_", "", 1)
+            # Map to client format (e.g., user_dietary_preferences -> dietary_preferences)
+            client_state["user"][attr] = value
+            
+        elif key.startswith("planning_"):
+            attr = key.replace("planning_", "", 1)
+            client_state["planning"][attr] = value
+            
+        elif key.startswith("verification_"):
+            attr = key.replace("verification_", "", 1)
+            client_state["verification"][attr] = value
+            
+        elif key.startswith("ordering_order_status_"):
+            attr = key.replace("ordering_order_status_", "", 1)
+            client_state["ordering"]["order_status"][attr] = value
+            
+        elif key.startswith("ordering_confirmation_bill_"):
+            attr = key.replace("ordering_confirmation_bill_", "", 1)
+            client_state["ordering"]["confirmation"]["bill"][attr] = value
+            
+        elif key.startswith("ordering_confirmation_"):
+            attr = key.replace("ordering_confirmation_", "", 1)
+            client_state["ordering"]["confirmation"][attr] = value
+            
+        elif key.startswith("ordering_"):
+            attr = key.replace("ordering_", "", 1)
+            client_state["ordering"][attr] = value
+    
+    return client_state
+
+
 @app.get("/api/sessions/{session_id}/state/{state_key}")
 async def get_session_state_value(session_id: str, state_key: str) -> dict[str, Any]:
     """
@@ -405,6 +458,7 @@ async def get_user_active_session_state(user_id: str, session_id: str) -> dict[s
     """
     Get the state for a specific active session by user_id and session_id.
     Returns the complete session state including workflow_status and other state data.
+    Transforms flat state structure to nested client format.
     """
     try:
         # ServiceLogger.api_called_panel(
@@ -430,11 +484,14 @@ async def get_user_active_session_state(user_id: str, session_id: str) -> dict[s
             ServiceLogger.log_error(f"Session {session_id} does not belong to user {user_id}", "GET_ACTIVE_SESSION_STATE")
             raise HTTPException(status_code=403, detail="Session does not belong to user")
         
+        # Transform the flat state to client format
+        client_state = transform_state_to_client_format(session.state)
+        
         ServiceLogger.log_info(f"Retrieved state for session {session_id} for user {user_id}", "GET_ACTIVE_SESSION_STATE")
         return {
             "user_id": user_id,
             "session_id": session_id,
-            "state": session.state,
+            "state": client_state,
             "create_time": session.create_time.isoformat(),
             "update_time": session.update_time.isoformat(),
             "timestamp": datetime.now().isoformat()
@@ -451,16 +508,17 @@ async def get_user_active_session_state(user_id: str, session_id: str) -> dict[s
 
 
 @app.post("/api/sessions/{session_id}/status", response_model=None)
-async def check_order_status(session_id: str, streaming: bool = False) -> dict[str, Any] | StreamingResponse:
+async def check_order_status(session_id: str, streaming: bool = False, message: str | None = None) -> dict[str, Any] | StreamingResponse:
     """
     Ping the agent to check the current status of an order.
     Similar to resume_workflow but specifically asks the agent for status update.
+    Optional message parameter allows customizing the user input sent to the agent.
     """
     try:
         ServiceLogger.api_called_panel(
             "POST",
             f"/api/sessions/{session_id}/status",
-            params={"session_id": session_id, "streaming": streaming}
+            params={"session_id": session_id, "streaming": streaming, "message": message}
         )
         
         # Step 1: Get the session to find the user_id
@@ -488,7 +546,8 @@ async def check_order_status(session_id: str, streaming: bool = False) -> dict[s
         auto_nom = AutoNom(current_user, session_id=session_id)
         
         # Ask the agent specifically about the order status
-        user_input = "What is the current status of my order?"
+        # Use custom message if provided, otherwise use default status check message
+        user_input = message if message else "What is the current status of my order?"
         
         # Return based on streaming flag
         if streaming:
@@ -514,6 +573,7 @@ async def check_order_status(session_id: str, streaming: bool = False) -> dict[s
                 "workflow_status": workflow_status or "CHECKING_STATUS",
                 "user_id": user_id,
                 "action": "status_check",
+                "message": user_input,
                 "timestamp": datetime.now().isoformat()
             }
     

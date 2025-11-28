@@ -50,14 +50,13 @@ def place_food_order(food_order: FoodOrder, tool_context: ToolContext) -> dict[s
     )
 
     # get current list of orders
-    current_order_state = getattr(tool_context.state, "ordering", {})
-    current_order_statuses = getattr(current_order_state, "order_status", [])
+    current_order_statuses = getattr(tool_context.state, "ordering_order_status", [])
 
     # update list of orders
     current_order_statuses.append(order_status.model_dump())
 
     # update the state
-    tool_context.state["ordering"]["order_status"] = current_order_statuses
+    tool_context.state["ordering_order_status"] = current_order_statuses
 
     return {
         "status": "success",
@@ -104,9 +103,7 @@ def update_order_confirmation_message(order_confirmation_message: dict[str, Any]
     """
 
     # update the state
-    current_order_state = getattr(tool_context.state, "ordering", {})
-    current_order_state["confirmation"] = order_confirmation_message
-    tool_context.state["ordering"] = current_order_state
+    tool_context.state["ordering_confirmation"] = order_confirmation_message
 
     # return update status
     return {
@@ -143,15 +140,15 @@ meal_order_executor = LlmAgent(
     You are a diligent and detail-oriented ordering agent. Your sole responsibility is to take the finalized meal choice and execute the order.
 
     **INPUT CONTEXT:**
-    - **User Preferences:** {user.dietary_preferences}
-    - **Allergies (CRITICAL):** {user.allergies}
-    - **Available Options:** {planning.options}
-    - **User Selection:** {verification.user_choice} (This is the index or ID of the chosen meal)
+    - **User Preferences:** {user_dietary_preferences}
+    - **Allergies (CRITICAL):** {user_allergies}
+    - **Available Options:** {planning_options}
+    - **User Selection:** {verification_user_choice} (This is the index or ID of the chosen meal)
 
     **EXECUTION PLAN:**
     
-    1. **Identify the Meal:** - Locate the specific restaurant and menu item corresponding to the `{verification.user_choice}` from the `{planning.options}` list.
-       - *Validation:* Ensure the item does not conflict with `{user.allergies}`. If it does, STOP and ask for clarification (though this should have been caught earlier).
+    1. **Identify the Meal:** - Locate the specific restaurant and menu item corresponding to the `{verification_user_choice}` from the `{planning_options}` list.
+       - *Validation:* Ensure the item does not conflict with `{user_allergies}`. If it does, STOP and ask for clarification (though this should have been caught earlier).
 
     2. **Place the Order:**
        - Call the `place_food_order` tool with the restaurant ID and menu item ID.
