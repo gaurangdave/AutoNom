@@ -1,5 +1,7 @@
 export const DAYS = ['M', 'T', 'W', 'Th', 'F', 'Sa', 'Su'];
 
+export const FULL_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
 export const ALLERGIES_LIST = [
   { name: 'Peanuts', icon: 'bowl-rice' },
   { name: 'Dairy', icon: 'cheese' },

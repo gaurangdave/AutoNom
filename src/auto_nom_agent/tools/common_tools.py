@@ -1,3 +1,4 @@
+from datetime import datetime
 from google.adk.tools.tool_context import ToolContext
 
 from src.utils.state import is_valid_transition
@@ -25,3 +26,15 @@ def update_workflow_status(status: str, tool_context: ToolContext) -> dict[str, 
         "status": "failure",
         "message": f"workflow status cannot updated from {current_status} to {status}"
     }
+
+def get_current_day_of_week(tool_context: ToolContext):
+    """
+    Returns the current day of the week as a string (e.g., "Monday", "Tuesday").
+    """
+    mock_day = tool_context.state["mock_day"]
+    
+    if mock_day:
+        return mock_day
+    
+    current_datetime = datetime.now()
+    return current_datetime.strftime("%A")

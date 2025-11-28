@@ -1,11 +1,10 @@
-from datetime import datetime
 from google.adk.agents import LlmAgent
 from google.adk.tools.function_tool import FunctionTool
 
 # from google.adk.tools.agent_tool import AgentTool
 
 
-from src.auto_nom_agent.tools.common_tools import update_workflow_status
+from src.auto_nom_agent.tools.common_tools import get_current_day_of_week, update_workflow_status
 from src.utils.workflow_utils import get_workflow
 from .subagents.meal_planner.agent import meal_planner
 from .subagents.meal_choice_verifier.agent import meal_choice_verifier
@@ -13,14 +12,6 @@ from .subagents.meal_order_executor.agent import meal_order_executor
 from src.auto_nom_agent.configs import retry_options, model, gemini_pro
 from google.adk.models.google_llm import Gemini
 workflow = get_workflow()
-
-def get_current_day_of_week():
-    """
-    Returns the current day of the week as a string (e.g., "Monday", "Tuesday").
-    """
-    current_datetime = datetime.now()
-    return current_datetime.strftime("%A")
-
 
 auto_nom_agent = LlmAgent(
     model=Gemini(model=gemini_pro, retry_options=retry_options),
@@ -58,7 +49,8 @@ auto_nom_agent = LlmAgent(
     - If the user asks a general question unrelated to the workflow, politely decline.
     """,
     sub_agents=[meal_planner, meal_choice_verifier, meal_order_executor],
-    tools=[FunctionTool(get_current_day_of_week), FunctionTool(update_workflow_status)]
+    tools=[FunctionTool(get_current_day_of_week),
+           FunctionTool(update_workflow_status)]
 )
 
 root_agent = auto_nom_agent

@@ -109,15 +109,20 @@ export const useAutoNom = () => {
   }, []);
 
   // Trigger plan with non-streaming API
-  const triggerPlan = useCallback(async (userId, mealType, onEvent, onComplete, onError) => {
+  const triggerPlan = useCallback(async (userId, mealType, mockDay, onEvent, onComplete, onError) => {
     setIsProcessing(true);
     setEventLog([]);
     
     try {
-      logger.log('Triggering plan:', { userId, mealType });
-      const response = await axios.post(
-        `/api/users/${userId}/meals/${mealType}/trigger?streaming=false`
-      );
+      logger.log('Triggering plan:', { userId, mealType, mockDay });
+      
+      // Build URL with optional mock_day query parameter
+      let url = `/api/users/${userId}/meals/${mealType}/trigger?streaming=false`;
+      if (mockDay) {
+        url += `&mock_day=${encodeURIComponent(mockDay)}`;
+      }
+      
+      const response = await axios.post(url);
 
       logger.log('Trigger response:', response.data);
 

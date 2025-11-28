@@ -1,6 +1,4 @@
 import { Moon, Sun, ArrowRight } from 'lucide-react';
-import { useAutoNom } from '../../hooks/useAutoNom';
-import { useUser } from '../../hooks/useUser';
 import PropTypes from 'prop-types';
 import { CARD_STYLES, BUTTON_STYLES } from '../../utils/styleClasses';
 

@@ -117,12 +117,12 @@ async def create_user(user: UserProfile) -> UserProfile:
 
 
 @app.post("/api/users/{user_id}/meals/{meal_type}/trigger", response_model=None)
-async def trigger_workflow(user_id: str, meal_type: str, streaming: bool = False) -> dict[str, Any] | StreamingResponse:
+async def trigger_workflow(user_id: str, meal_type: str, streaming: bool = False, mock_day: str | None = None) -> dict[str, Any] | StreamingResponse:
     try:
         ServiceLogger.api_called_panel(
             "POST",
             f"/api/users/{user_id}/meals/{meal_type}/trigger",
-            params={"user_id": user_id, "meal_type": meal_type, "streaming": streaming},
+            params={"user_id": user_id, "meal_type": meal_type, "streaming": streaming, "mock_day": mock_day},
             user_id=user_id
         )
         ServiceLogger.log_panel(
@@ -148,7 +148,7 @@ async def trigger_workflow(user_id: str, meal_type: str, streaming: bool = False
             raise HTTPException(status_code=404, detail="User not found")
 
         # TODO: Add a logic to save the started session from preventing multiple runs
-        auto_nom = AutoNom(current_user, meal_type=meal_type)
+        auto_nom = AutoNom(current_user, meal_type=meal_type, mock_day=mock_day)
         user_input = f"Plan a {meal_type} for {current_user.name}"
 
         # Return based on streaming flag
@@ -217,7 +217,9 @@ async def resume_workflow(session_id: str, req: ResumeRequest, streaming: bool =
 
         # step 3: trigger the agent with user input
         # TODO: Add a logic to save the started session from preventing multiple runs
-        auto_nom = AutoNom(current_user, session_id=session_id)
+        # Get mock_day from session state if it exists
+        mock_day = db_manager.get_session_state_val(session_id, "mock_day")
+        auto_nom = AutoNom(current_user, session_id=session_id, mock_day=mock_day)
         user_input = f"{req.choice}"
 
         # Return based on streaming flag

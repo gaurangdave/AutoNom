@@ -48,6 +48,7 @@ class SessionState(BaseModel):
     user_dietary_preferences: str = Field(default="")
     user_allergies: list[str] = Field(default_factory=list)
     user_special_instructions: str = Field(default="")
+    mock_day: str = Field(default="")
     verification_user_feedback: str = Field(default="")
     verification_user_choice: str = Field(default="")
     verification_message: str = Field(default="")
@@ -63,10 +64,11 @@ class SessionState(BaseModel):
 
 
 class AutoNom():
-    def __init__(self, user: UserProfile, meal_type: str = "", session_id: str = ""):
+    def __init__(self, user: UserProfile, meal_type: str = "", session_id: str = "", mock_day: str | None = None):
         self._app_name = "auto_nom_agent"
         self.user = user
         self.meal_type = meal_type
+        self.mock_day = mock_day
         
         # Create state using Pydantic model with user-specific values
         state_model = SessionState(
@@ -78,7 +80,8 @@ class AutoNom():
             user_meals=",".join(map(lambda meals: f"{meals.type}{':'+meals.customName if meals.customName else ''}", user.meals)),
             user_dietary_preferences=",".join(user.preferences),
             user_allergies=user.allergies,
-            user_special_instructions=user.special_instructions
+            user_special_instructions=user.special_instructions,
+            mock_day=mock_day if mock_day else ""
         )
         
         # Convert to dict for use with session service

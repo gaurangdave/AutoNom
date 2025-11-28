@@ -6,6 +6,7 @@ import { useAutoNom } from '../../hooks/useAutoNom';
 import { useToast } from '../../hooks/useToast';
 import { createLogger } from '../../utils/logger';
 import { INFO_MESSAGES, ERROR_MESSAGES, ICON_SIZES } from '../../utils/uiConstants';
+import { FULL_DAYS } from '../../utils/constants';
 import Card from '../common/Card';
 import MealRoutineCard from '../meals/MealRoutineCard';
 
@@ -16,6 +17,7 @@ const MealsTab = ({ setActiveTab }) => {
   const { triggerPlan } = useAutoNom();
   const toast = useToast();
   const [planningMeal, setPlanningMeal] = useState(null);
+  const [selectedDay, setSelectedDay] = useState(null);
 
   const meals = currentUser?.meals || [];
 
@@ -32,6 +34,7 @@ const MealsTab = ({ setActiveTab }) => {
       await triggerPlan(
         userId,
         mealType,
+        selectedDay,
         (eventData) => {
           logger.log('Event:', eventData);
           // Store session ID in UserContext when received
@@ -95,6 +98,27 @@ const MealsTab = ({ setActiveTab }) => {
         <Info className="text-blue-400 mt-1" size={ICON_SIZES.xl} />
         <div className="text-sm text-blue-200">
           {INFO_MESSAGES.mealInstructions}
+        </div>
+      </Card>
+
+      <Card className="mb-6">
+        <h3 className="font-bold text-slate-200 mb-4">Mock Current Day (Optional)</h3>
+        <p className="text-xs text-slate-400 mb-4">Select a day to simulate for meal planning. If no day is selected, the actual current day will be used.</p>
+        <div className="grid grid-cols-7 gap-2">
+          {FULL_DAYS.map((day) => (
+            <button
+              key={day}
+              type="button"
+              onClick={() => setSelectedDay(selectedDay === day ? null : day)}
+              className={`h-12 rounded-lg font-bold text-sm transition-all ${
+                selectedDay === day
+                  ? 'bg-primary-600 text-white shadow-md shadow-primary-600/30'
+                  : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+              }`}
+            >
+              {day.substring(0, 2)}
+            </button>
+          ))}
         </div>
       </Card>
 
