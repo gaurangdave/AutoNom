@@ -43,7 +43,8 @@ class SessionState(BaseModel):
     planning_options: list[Any] = Field(default_factory=list)
     user_id: str = Field(default="")
     user_name: str = Field(default="")
-    user_meal_schedule: str = Field(default="")
+    user_days: str = Field(default="")
+    user_meals: str = Field(default="")
     user_dietary_preferences: str = Field(default="")
     user_allergies: list[str] = Field(default_factory=list)
     user_special_instructions: str = Field(default="")
@@ -73,6 +74,8 @@ class AutoNom():
             planning_meal_type=meal_type,
             user_id=user.id,
             user_name=user.name,
+            user_days=",".join(user.days),
+            user_meals=",".join(map(lambda meals: f"{meals.type}{':'+meals.customName if meals.customName else ''}", user.meals)),
             user_dietary_preferences=",".join(user.preferences),
             user_allergies=user.allergies,
             user_special_instructions=user.special_instructions

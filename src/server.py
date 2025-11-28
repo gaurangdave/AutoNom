@@ -375,14 +375,16 @@ async def get_user_sessions(user_id: str) -> dict[str, Any]:
         # Get all sessions for the user
         all_sessions: list[Any] = db_manager.get_user_sessions("auto_nom_agent", user_id)
         
-        # Format the response with session states
+        # Format the response with session states (transformed to client format)
         sessions_data: list[dict[str, Any]] = []
         for session in all_sessions:
             # treat session as dynamic Any for typing purposes
             s: Any = session
+            # Transform the flat state to client format
+            client_state = transform_state_to_client_format(s.state)
             sessions_data.append({
                 "session_id": s.id,
-                "state": s.state,
+                "state": client_state,
                 "create_time": s.create_time.isoformat(),
                 "update_time": s.update_time.isoformat()
             })

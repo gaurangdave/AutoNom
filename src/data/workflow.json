@@ -5,6 +5,11 @@
     "action": "Delegate to MealPlanner agent to start researching."
   },
   {
+    "status": "NO_PLANNING_NEEDED",
+    "meaning": "The workflow has been triggered, but no meal planning is needed at this time.",
+    "action": "Inform the user that no meal planning is required."
+  },
+  {
     "status": "MEAL_PLANNING_STARTED",
     "meaning": "The MealPlanner agent is currently active. It is searching for restaurants and gathering menu items.",
     "action": "Delegate to MealPlanner agent to continue planning"

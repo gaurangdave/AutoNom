@@ -126,7 +126,7 @@ def upsert_user(user_profile: UserProfile) -> None:
                     json.dumps(user_profile.preferences),
                     json.dumps(user_profile.allergies),
                     json.dumps(user_profile.days),
-                    json.dumps(user_profile.meals),
+                    json.dumps([meal.model_dump() for meal in user_profile.meals]),
                     user_profile.special_instructions
                 )
             )
@@ -169,21 +169,22 @@ def get_all_users() -> List[UserProfile]:
                 preferences: List[str] = json.loads(u['preferences']) if u['preferences'] else []
                 allergies: List[str] = json.loads(u['allergies']) if u['allergies'] else []
                 days: List[str] = json.loads(u['days']) if u.get('days') else []
-                meals: List[Dict[str, Any]] = json.loads(u['meals']) if u.get('meals') else []
+                meals_data: List[Dict[str, Any]] = json.loads(u['meals']) if u.get('meals') else []
                 
                 # Handle legacy schedule column for backward compatibility
-                if not days and not meals and u.get('schedule'):
+                if not days and not meals_data and u.get('schedule'):
                     schedule = json.loads(u['schedule'])
                     days = schedule.get('days', [])
-                    meals = schedule.get('meals', [])
+                    meals_data = schedule.get('meals', [])
                 
+                # Pydantic will automatically convert meal dicts to Meal objects
                 user_profile = UserProfile(
                     id=u['id'],
                     name=u['name'],
                     preferences=preferences,
                     allergies=allergies,
                     days=days,
-                    meals=meals,
+                    meals=meals_data,
                     special_instructions=u.get('special_instructions', '')
                 )
                 users.append(user_profile)
@@ -204,21 +205,22 @@ def get_user(user_id: str) -> Optional[UserProfile]:
                 preferences: List[str] = json.loads(u['preferences']) if u['preferences'] else []
                 allergies: List[str] = json.loads(u['allergies']) if u['allergies'] else []
                 days: List[str] = json.loads(u['days']) if u.get('days') else []
-                meals: List[Dict[str, Any]] = json.loads(u['meals']) if u.get('meals') else []
+                meals_data: List[Dict[str, Any]] = json.loads(u['meals']) if u.get('meals') else []
                 
                 # Handle legacy schedule column for backward compatibility
-                if not days and not meals and u.get('schedule'):
+                if not days and not meals_data and u.get('schedule'):
                     schedule = json.loads(u['schedule'])
                     days = schedule.get('days', [])
-                    meals = schedule.get('meals', [])
+                    meals_data = schedule.get('meals', [])
                 
+                # Pydantic will automatically convert meal dicts to Meal objects
                 user_profile = UserProfile(
                     id=u['id'],
                     name=u['name'],
                     preferences=preferences,
                     allergies=allergies,
                     days=days,
-                    meals=meals,
+                    meals=meals_data,
                     special_instructions=u.get('special_instructions', '')
                 )
                 return user_profile
@@ -347,6 +349,40 @@ def get_session_by_id(session_id: str) -> Optional[Session]:
         raise
 
 
+def get_active_session_by_id(session_id: str) -> Optional[Session]:
+    """
+    Retrieves an active session using just the session ID.
+    An active session is one where state.workflow_status is not 'ORDER_CONFIRMED' or 'NO_PLANNING_NEEDED'.
+    Returns the Session object if found and active, None otherwise.
+    """
+    try:
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM sessions WHERE id = ? LIMIT 1", 
+                (session_id,)
+            ).fetchone()
+            if row:
+                session_data = dict(row)
+                # Parse the JSON state back to a dictionary
+                state: Dict[str, Any] = json.loads(session_data['state']) if session_data['state'] else {}
+                
+                # Check if session is active
+                workflow_status = state.get('workflow_status', '')
+                if workflow_status != 'ORDER_CONFIRMED' and workflow_status != 'NO_PLANNING_NEEDED':
+                    return Session(
+                        app_name=session_data['app_name'],
+                        user_id=session_data['user_id'],
+                        id=session_data['id'],
+                        state=state,
+                        create_time=datetime.fromisoformat(session_data['create_time']),
+                        update_time=datetime.fromisoformat(session_data['update_time'])
+                    )
+            return None
+    except Exception as e:
+        ServiceLogger.log_error("Database error retrieving active session", "DB", error=e)
+        raise
+
+
 def get_user_sessions(app_name: str, user_id: str) -> List[Session]:
     """
     Retrieves all sessions for a specific app_name and user_id.
@@ -399,7 +435,7 @@ def get_active_user_sessions(app_name: str, user_id: str) -> List[Session]:
                 
                 # Check if session is active (workflow_status is not ORDER_CONFIRMED)
                 workflow_status = state.get('workflow_status', '')
-                if workflow_status != 'ORDER_CONFIRMED':
+                if workflow_status != 'ORDER_CONFIRMED' and workflow_status != 'NO_PLANNING_NEEDED':
                     session = Session(
                         app_name=session_data['app_name'],
                         user_id=session_data['user_id'],

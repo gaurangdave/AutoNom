@@ -153,6 +153,11 @@ restaurant_scout_agent = LlmAgent(
     IMPORTANT Please confirm you can see these preferences
 
     ** User Preferences **
+
+    - **User Meal Schedule**
+        - ** Days **: {{user_days}}
+        - ** Meals ** {{user_meals}}
+    
     - **Dietary Preferences:** 
     {user_dietary_preferences}
     
@@ -311,6 +316,10 @@ meal_planner = LlmAgent(
     * Step 3: After updating the state, your task is done. Delegate back to parent `auto_nom_agent` agent.
     
     ** User Preferences **
+    - **User Meal Schedule**
+        - ** Days **: {{user_days}}
+        - ** Meals ** {{user_meals}}
+        
     - **Dietary Preferences:** 
     {user_dietary_preferences}
     

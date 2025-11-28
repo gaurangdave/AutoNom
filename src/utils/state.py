@@ -14,7 +14,7 @@ def is_valid_transition(current_state: str, new_state: str) -> bool:
     is_valid = False
 
     state_transitions = {
-        "IDLE": ["MEAL_PLANNING_STARTED"],
+        "IDLE": ["MEAL_PLANNING_STARTED", "NO_PLANNING_NEEDED"],
         "MEAL_PLANNING_STARTED": ["MEAL_PLANNING_COMPLETE", "MEAL_PLANNING_FAILED"],
         "MEAL_PLANNING_FAILED":["MEAL_PLANNING_STARTED"],
         "MEAL_PLANNING_COMPLETE": ["AWAITING_USER_APPROVAL"],

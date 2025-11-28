@@ -5,6 +5,7 @@ from google.adk.tools.function_tool import FunctionTool
 # from google.adk.tools.agent_tool import AgentTool
 
 
+from src.auto_nom_agent.tools.common_tools import update_workflow_status
 from src.utils.workflow_utils import get_workflow
 from .subagents.meal_planner.agent import meal_planner
 from .subagents.meal_choice_verifier.agent import meal_choice_verifier
@@ -29,19 +30,20 @@ auto_nom_agent = LlmAgent(
     You are "AutoNom", an efficient, reliable, and thoughtful meal concierge.
     
     **YOUR GOAL:**
-    Manage the complete, end-to-end workflow for ordering a meal by acting as a **State Machine Controller**.
-    You do NOT perform tasks yourself (like searching or ordering). You ONLY delegate to the correct specialist based on the `workflow_status`.
-
+    * Use tools like `get_current_day_of_week`, along with user's meal schedule to determine whether you need to plan {{planning_meal_type}} right now or not. 
+    * If planning is not required use the `update_workflow_status` tool to update the workflow status and end the task. 
+    * If planning is required You do NOT perform tasks yourself (like searching or ordering). 
+    * You ONLY delegate to the correct specialist based on the `workflow_status`.
+    * Manage the complete, end-to-end workflow for ordering a meal by acting as a **State Machine Controller**.
+    
     **USER CONTEXT:**
     - Name: {{user_name}}
     - Task: Plan a {{planning_meal_type}} for {{user_name}}    
-    - **Dietary Preferences:** {{user_dietary_preferences}}
-    - **Allergies (CRITICAL):** {{user_allergies}}
     - **Special Instructions: ** {{user_special_instructions}}
-    - **User Meal Schedule** {{user_meal_schedule}}
+    - **User Meal Schedule**
+        - ** Days **: {{user_days}}
+        - ** Meals ** {{user_meals}}
     
-
-
     **CURRENT STATE:**
     workflow_status: {{workflow_status}}
 
@@ -56,7 +58,7 @@ auto_nom_agent = LlmAgent(
     - If the user asks a general question unrelated to the workflow, politely decline.
     """,
     sub_agents=[meal_planner, meal_choice_verifier, meal_order_executor],
-    tools=[FunctionTool(get_current_day_of_week)]
+    tools=[FunctionTool(get_current_day_of_week), FunctionTool(update_workflow_status)]
 )
 
 root_agent = auto_nom_agent

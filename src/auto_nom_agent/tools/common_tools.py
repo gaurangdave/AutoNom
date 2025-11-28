@@ -1,5 +1,8 @@
 from google.adk.tools.tool_context import ToolContext
 
+from src.utils.state import is_valid_transition
+
+
 def update_workflow_status(status: str, tool_context: ToolContext) -> dict[str, str]:
     """Updates the workflow status value
 
@@ -10,8 +13,15 @@ def update_workflow_status(status: str, tool_context: ToolContext) -> dict[str, 
         dict[str, str]: Returns dictionary with message and status of workflow status update. 
     """
     current_status = tool_context.state["workflow_status"]
-    tool_context.state["workflow_status"] = status
+
+    if is_valid_transition(current_state=current_status, new_state=status):
+        tool_context.state["workflow_status"] = status
+        return {
+            "status": "success",
+            "message": f"workflow status updated from {current_status} to {status}"
+        }
+
     return {
-        "status": "success",
-        "message": f"workflow status updated from {current_status} to {status}"
+        "status": "failure",
+        "message": f"workflow status cannot updated from {current_status} to {status}"
     }
