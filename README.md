@@ -14,6 +14,19 @@ Built for the **Google AI Intensive Capstone (December 2025)**, this project dem
 ### Agentic Workflow
 ![Agentic Workflow](./images/agentic_workflow.png)
 
+
+```mermaid
+graph LR
+    A[User Profile] --> B(AutoNom Agent);
+    B --> C{Decision Logic};
+    C -->|Need Research?| D[Researcher Agent];
+    C -->|Have Options?| E[Verifier Agent];
+    E --> F{Human Approval};
+    F -->|Yes| G[Order Executor];
+    F -->|No| D;
+    G --> H[Dinner is Served];
+```    
+
 ### App Screenshots
 ![Planning Meal](./images/planning_meal.png)
 
@@ -99,14 +112,3 @@ A jack of all trades in software engineering, with 15 years of crafting full-sta
 ## 🛠 Skills
 `Google ADK`, `Agentic AI`, `Python`, `FastAPI`, `React`, `Docker`, `Microservices`
 
-```mermaid
-graph LR
-    A[User Profile] --> B(AutoNom Agent);
-    B --> C{Decision Logic};
-    C -->|Need Research?| D[Researcher Agent];
-    C -->|Have Options?| E[Verifier Agent];
-    E --> F{Human Approval};
-    F -->|Yes| G[Order Executor];
-    F -->|No| D;
-    G --> H[Dinner is Served];
-```    
