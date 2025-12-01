@@ -48,9 +48,10 @@ FITNESS_FIONA = UserProfile(
     ],
     special_instructions=(
         "I'm on a strict cut. "
-        "If it's Monday or Wednesday: I want a Salad under 500 calories. "
-        "If it's Friday: I want a High-Protein Burger (no bun) under $20. "
+        "If it's Monday or Wednesday: I want a Salad under 500 calories and the budget under $20 "
+        "If it's Friday: I want a High-Protein Burger (no bun) and a dessert and the budget $40. "
         "ALWAYS ask for 'Sauce on the side' and 'Extra water'."
+        "On Friday's also ask for extra plate and napkins too."
     )
 )
 

@@ -73,12 +73,12 @@ export const hasUserChoice = (session) => {
 // ============================================================================
 
 /**
- * Get the complete order confirmation data (object with bill and message)
+ * Get the complete order confirmation data (the bill object with orders, message, and grand_total)
  * @param {Object} session - The session object
- * @returns {Object|null} The order confirmation object with bill and message, or null
+ * @returns {Object|null} The bill object with orders array, message, and grand_total, or null
  */
 export const getOrderConfirmationData = (session) => 
-  session?.state?.ordering?.confirmation || null;
+  session?.state?.ordering?.confirmation?.bill || null;
 
 /**
  * Get just the order confirmation message text
@@ -86,15 +86,31 @@ export const getOrderConfirmationData = (session) =>
  * @returns {string|null} The order confirmation message string or null
  */
 export const getOrderConfirmationMessage = (session) => 
-  session?.state?.ordering?.confirmation?.message || null;
+  session?.state?.ordering?.confirmation?.bill?.message || null;
 
 /**
  * Get the order bill details
  * @param {Object} session - The session object
- * @returns {Object|null} The bill object with items, total_amount, restaurant_name, or null
+ * @returns {Object|null} The bill object with orders array, message, and grand_total, or null
  */
 export const getOrderBill = (session) => 
   session?.state?.ordering?.confirmation?.bill || null;
+
+/**
+ * Get the orders array from the bill
+ * @param {Object} session - The session object
+ * @returns {Array} The orders array (empty array if none)
+ */
+export const getOrdersFromBill = (session) => 
+  session?.state?.ordering?.confirmation?.bill?.orders || [];
+
+/**
+ * Get the grand total from the bill
+ * @param {Object} session - The session object
+ * @returns {number|null} The grand total or null
+ */
+export const getGrandTotal = (session) => 
+  session?.state?.ordering?.confirmation?.bill?.grand_total || null;
 
 /**
  * Get the order status array

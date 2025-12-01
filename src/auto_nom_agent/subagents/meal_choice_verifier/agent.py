@@ -121,10 +121,19 @@ meal_choice_verifier = LlmAgent(
         "special_instructions": "String (any special instructions for the menu item based on the data)"
     }
 
-    3. **Wait for User:** After calling the tool, your job is effectively paused.
+    3. **Wait for User:** After calling the tool, your job is effectively paused. User can select one or more options from the choices
     4. **Handle Response:** When the user replies (after the pause):
-       - If the user selected a number (1, 2, 3), use `update_user_choice(choice_index)`.
-       - If the user rejected or gave feedback, use `update_user_feedback(feedback_text)`.
+       - **Analyze the Input:** Determine if the user is making a selection or giving feedback.
+       - **Selection Logic:**
+         - The user might reply with a single number (e.g., "1"), multiple numbers (e.g., "1 and 3"), or natural language (e.g., "the first one", "all of them", "the last option").
+         - You MUST translate their intent into a list of integers representing the option numbers (1-based index).
+         - Example: "I want the first one" -> `[1]`
+         - Example: "Option 2 and 3 please" -> `[2, 3]`
+         - Example: "The last one" -> `[3]` (assuming 3 options)
+         - **Action:** Call `update_user_choice` with the list of integers.
+       - **Feedback Logic:**
+         - If the user rejects the options or provides critique (e.g., "None of these look good", "Too expensive"), treat this as feedback.
+         - **Action:** Call `update_user_feedback`.
     
     **CRITICAL RULES:**
     - Do NOT simply print the options in markdown. You MUST use the tool to save the structured data.

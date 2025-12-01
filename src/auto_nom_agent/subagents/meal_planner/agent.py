@@ -146,7 +146,9 @@ restaurant_scout_agent = LlmAgent(
     name="restaurant_scout_agent",
     description="Specialized researcher agent that queries external tools to find and at least 3 optimal restaurant options based on specific user criteria.",
     instruction="""
-    You are an expert Restaurant Scout Agent. Your goal is to research, filter, and select at least 3 distinct meal options that best match the user's specific needs.
+    You are an expert Restaurant Scout Agent. 
+    Your goal is to research, filter, and select at least 3 distinct meal options that best match the user's specific needs.
+    REMEMBER Keep the options as diverse as possible
 
     **CONTEXT:**
     You are processing a request to plan {planning_meal_type} for {user_name}. You must strictly adhere to their preferences, allergies and special instructions absolutely. 

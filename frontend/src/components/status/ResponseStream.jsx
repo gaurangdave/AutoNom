@@ -62,10 +62,11 @@ const ResponseStream = ({ sessionState }) => {
   }
 
   // Add order confirmation if available
-  if (state?.order?.confirmation) {
+  if (state?.ordering?.confirmation?.bill?.message) {
+    const message = state.ordering.confirmation.bill.message;
     responses.push({
       status: 'Order Confirmed',
-      meaning: state.order.confirmation.substring(0, 100) + (state.order.confirmation.length > 100 ? '...' : ''),
+      meaning: message.substring(0, 100) + (message.length > 100 ? '...' : ''),
       isComplete: true
     });
   }
@@ -92,7 +93,7 @@ const ResponseStream = ({ sessionState }) => {
             <div className="text-sm font-semibold text-white mb-1">
               {response.status}
             </div>
-            <div className="text-xs text-gray-400 break-words">
+            <div className="text-xs text-gray-400 wrap-break-word">
               {response.meaning}
             </div>
             {response.timestamp && (
@@ -121,7 +122,7 @@ ResponseStream.propTypes = {
       planning: PropTypes.object,
       meal_planning_result: PropTypes.array,
       user_choice: PropTypes.array,
-      order: PropTypes.object,
+      ordering: PropTypes.object,
     }),
   }),
 };
