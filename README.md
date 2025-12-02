@@ -8,6 +8,9 @@ Built for the **Google AI Intensive Capstone (December 2025)**, this project dem
 
 ## 📸 Demo & Architecture
 
+### Detailed Demo Video
+[Youtube Link](https://youtu.be/gJMNEiR0jxA?si=4UUarlOOLIdGxPqk)
+
 ### AutoNom Architecture
 ![Architecture Diagram](./images/architecture_diagram.png)
 

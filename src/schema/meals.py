@@ -12,7 +12,7 @@ class Meals(BaseModel):
     name: str = Field(description="Restaurant Name")
     description: str = Field(description="Restaurant description")
     order: list[Order] = Field(
-        description="list of orders from the restaurant")
+    description="list of orders from the restaurant")
 
 
 class MealOptions(BaseModel):
